@@ -1,10 +1,10 @@
 <?php
 /**
  * Gravity Forms Field Mapper for Momentum Webhook
- * Version: 1.0.6
+ * Version: 1.0.7
  * 
  * This file maps Gravity Forms field IDs to proper field names
- * for the Security Guard Application form (Form ID 10)
+ * for the Security Guard Application forms (Form IDs 10, 11, 12)
  */
 
 // Prevent direct access
@@ -322,10 +322,46 @@ function get_security_guard_form_field_mappings() {
 }
 
 /**
+ * Get field mappings for Alarm Monitoring form (Form ID 11)
+ */
+function get_alarm_monitoring_form_field_mappings() {
+    // Using same field structure as Security Guard form
+    // These mappings can be customized for Alarm Monitoring specific fields
+    return get_security_guard_form_field_mappings();
+}
+
+/**
+ * Get field mappings for Private Investigator form (Form ID 12)
+ */
+function get_private_investigator_form_field_mappings() {
+    // Using same field structure as Security Guard form
+    // These mappings can be customized for Private Investigator specific fields
+    return get_security_guard_form_field_mappings();
+}
+
+/**
  * Transform Gravity Forms webhook data to use field names instead of IDs
  */
-function transform_gravity_forms_webhook($data) {
-    $field_mappings = get_security_guard_form_field_mappings();
+function transform_gravity_forms_webhook($data, $form_id = null) {
+    // Determine form ID from data if not provided
+    if ($form_id === null && isset($data['form_id'])) {
+        $form_id = intval($data['form_id']);
+    }
+    
+    // Select appropriate mappings based on form ID
+    switch ($form_id) {
+        case 11:
+            $field_mappings = get_alarm_monitoring_form_field_mappings();
+            break;
+        case 12:
+            $field_mappings = get_private_investigator_form_field_mappings();
+            break;
+        case 10:
+        default:
+            $field_mappings = get_security_guard_form_field_mappings();
+            break;
+    }
+    
     $transformed = array();
     
     foreach ($data as $field_id => $value) {
@@ -348,19 +384,24 @@ function transform_gravity_forms_webhook($data) {
  * Hook into Gravity Forms webhook to transform the data
  */
 add_filter('gform_webhooks_request_data', function($request_data, $feed, $entry, $form) {
-    // Transform the entry data (using only the $entry parameter that we need)
-    $transformed_data = transform_gravity_forms_webhook($entry);
+    // Get form ID from the form array
+    $form_id = isset($form['id']) ? intval($form['id']) : null;
+    
+    // Transform the entry data with form ID
+    $transformed_data = transform_gravity_forms_webhook($entry, $form_id);
     
     // Return the transformed data
     return $transformed_data;
 }, 10, 4);
 
 /**
- * Alternative: Create a custom action that sends properly formatted data
+ * Alternative: Create custom actions for each form that sends properly formatted data
  */
+
+// Form 10: Security Guard Application
 add_action('gform_after_submission_10', function($entry, $form) {
-    // Transform the entry data (form parameter is available if needed later)
-    $transformed_data = transform_gravity_forms_webhook($entry);
+    // Transform the entry data with form ID
+    $transformed_data = transform_gravity_forms_webhook($entry, 10);
     
     // Send to your webhook endpoint
     $webhook_url = 'YOUR_MOMENTUM_WEBHOOK_URL_HERE';
@@ -374,6 +415,48 @@ add_action('gform_after_submission_10', function($entry, $form) {
     
     // Log the response if needed
     if (is_wp_error($response)) {
-        error_log('Webhook Error: ' . $response->get_error_message());
+        error_log('Webhook Error (Form 10): ' . $response->get_error_message());
+    }
+}, 10, 2);
+
+// Form 11: Alarm Monitoring Application
+add_action('gform_after_submission_11', function($entry, $form) {
+    // Transform the entry data with form ID
+    $transformed_data = transform_gravity_forms_webhook($entry, 11);
+    
+    // Send to your webhook endpoint
+    $webhook_url = 'YOUR_MOMENTUM_WEBHOOK_URL_HERE';
+    
+    $response = wp_remote_post($webhook_url, array(
+        'method' => 'POST',
+        'headers' => array('Content-Type' => 'application/json'),
+        'body' => json_encode($transformed_data),
+        'timeout' => 30
+    ));
+    
+    // Log the response if needed
+    if (is_wp_error($response)) {
+        error_log('Webhook Error (Form 11): ' . $response->get_error_message());
+    }
+}, 10, 2);
+
+// Form 12: Private Investigator Application
+add_action('gform_after_submission_12', function($entry, $form) {
+    // Transform the entry data with form ID
+    $transformed_data = transform_gravity_forms_webhook($entry, 12);
+    
+    // Send to your webhook endpoint
+    $webhook_url = 'YOUR_MOMENTUM_WEBHOOK_URL_HERE';
+    
+    $response = wp_remote_post($webhook_url, array(
+        'method' => 'POST',
+        'headers' => array('Content-Type' => 'application/json'),
+        'body' => json_encode($transformed_data),
+        'timeout' => 30
+    ));
+    
+    // Log the response if needed
+    if (is_wp_error($response)) {
+        error_log('Webhook Error (Form 12): ' . $response->get_error_message());
     }
 }, 10, 2);
