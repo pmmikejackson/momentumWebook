@@ -1,6 +1,7 @@
 <?php
 /**
  * Gravity Forms Field Mapper for Momentum Webhook
+ * Version: 1.0.5
  * 
  * This file maps Gravity Forms field IDs to proper field names
  * for the Security Guard Application form (Form ID 10)
@@ -312,6 +313,8 @@ function get_security_guard_form_field_mappings() {
         'transaction_type' => 'transaction_type',
         'status' => 'entry_status',
         'source_id' => 'source_id',
+        'unique_id' => 'AgencyID',
+        'form_title' => 'FormName',
         
         // PDF field
         'gpdf_65981c1a21d80' => 'generated_pdf_url'
