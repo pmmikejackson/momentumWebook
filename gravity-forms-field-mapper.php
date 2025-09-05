@@ -345,7 +345,7 @@ function transform_gravity_forms_webhook($data) {
  * Hook into Gravity Forms webhook to transform the data
  */
 add_filter('gform_webhooks_request_data', function($request_data, $feed, $entry, $form) {
-    // Transform the entry data
+    // Transform the entry data (using only the $entry parameter that we need)
     $transformed_data = transform_gravity_forms_webhook($entry);
     
     // Return the transformed data
@@ -356,7 +356,7 @@ add_filter('gform_webhooks_request_data', function($request_data, $feed, $entry,
  * Alternative: Create a custom action that sends properly formatted data
  */
 add_action('gform_after_submission_10', function($entry, $form) {
-    // Transform the entry data
+    // Transform the entry data (form parameter is available if needed later)
     $transformed_data = transform_gravity_forms_webhook($entry);
     
     // Send to your webhook endpoint
