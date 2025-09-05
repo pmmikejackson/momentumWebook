@@ -1,0 +1,12 @@
+{
+    "stubs": [
+        "wordpress"
+    ],
+    "files": {
+        "exclude": [
+            "**/.git/**",
+            "**/node_modules/**",
+            "**/vendor/**"
+        ]
+    }
+}

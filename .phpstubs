@@ -1,0 +1,16 @@
+<?php
+/**
+ * WordPress function stubs for IDE recognition
+ * This file helps IDEs recognize WordPress functions
+ */
+
+// WordPress Hook Functions
+function add_filter($hook_name, $callback, $priority = 10, $accepted_args = 1) {}
+function add_action($hook_name, $callback, $priority = 10, $accepted_args = 1) {}
+
+// WordPress HTTP Functions  
+function wp_remote_post($url, $args = array()) {}
+function is_wp_error($thing) {}
+
+// WordPress Error Functions
+function error_log($message) {}
