@@ -42,7 +42,7 @@ function get_security_guard_form_field_mappings() {
         '7' => 'work_phone',
         '8' => 'fax_number',
         '9' => 'email_address',
-        '10' => 'alternate_email',
+        '10' => 'date_coverage_needed',
         
         // Personal Information
         '11' => 'date_of_birth',
