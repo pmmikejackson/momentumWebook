@@ -45,7 +45,7 @@ function get_security_guard_form_field_mappings() {
         '10' => 'date_coverage_needed',
         
         // Personal Information
-        '11' => 'date_of_birth',
+        '11' => 'type_of_company',
         '12' => 'social_security_number',
         '14' => 'drivers_license_number',
         '15' => 'drivers_license_state',
