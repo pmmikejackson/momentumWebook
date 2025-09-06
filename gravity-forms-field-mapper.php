@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
 function get_security_guard_form_field_mappings() {
     return array(
         // Basic Information
-        '1' => 'application_title',
+        '1' => 'company_name',
         '2' => 'applicant_address',
         '2.1' => 'street_address',
         '2.2' => 'address_line_2',
