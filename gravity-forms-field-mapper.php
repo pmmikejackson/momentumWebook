@@ -48,7 +48,7 @@ function get_security_guard_form_field_mappings() {
         '11' => 'type_of_company',
         '12' => 'fein_number',
         '14' => 'license_number',
-        '15' => 'drivers_license_state',
+        '15' => 'years_under_this_name',
         '16' => 'drivers_license_expiration',
         '17' => 'height',
         '18' => 'weight_pounds',
