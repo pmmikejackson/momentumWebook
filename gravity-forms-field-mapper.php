@@ -56,7 +56,7 @@ function get_security_guard_form_field_mappings() {
         '20' => 'percent_consulting',
         '21' => 'gender',
         '22' => 'each_occurrence',
-        '23' => 'citizenship_status',
+        '23' => 'aggregate',
         '24' => 'military_service',
         '25' => 'military_branch',
         '26' => 'military_discharge_type',
