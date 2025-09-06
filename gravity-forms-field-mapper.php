@@ -1,7 +1,7 @@
 <?php
 /**
  * Gravity Forms Field Mapper for Momentum Webhook
- * Version: 1.0.7
+ * Version: 1.0.8
  * 
  * This file maps Gravity Forms field IDs to proper field names
  * for the Security Guard Application forms (Form IDs 10, 11, 12)
