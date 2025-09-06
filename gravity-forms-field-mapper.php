@@ -51,7 +51,7 @@ function get_security_guard_form_field_mappings() {
         '15' => 'years_under_this_name',
         '16' => 'any_other_name',
         '17' => 'height',
-        '18' => 'weight_pounds',
+        '18' => 'percent_security_service',
         '19' => 'hair_color',
         '20' => 'eye_color',
         '21' => 'gender',
