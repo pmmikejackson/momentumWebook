@@ -60,7 +60,7 @@ function get_security_guard_form_field_mappings() {
         '24' => 'other_services',
         '25' => 'military_branch',
         '26' => 'military_discharge_type',
-        '27' => 'military_discharge_date',
+        '27' => 'most_clients_under_contract',
         
         // Emergency Contact
         '29' => 'emergency_contact_name',
