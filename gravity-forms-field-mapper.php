@@ -63,7 +63,7 @@ function get_security_guard_form_field_mappings() {
         '27' => 'most_clients_under_contract',
         
         // Emergency Contact
-        '29' => 'emergency_contact_name',
+        '29' => 'workers_comp_in_force',
         '30' => 'emergency_contact_relationship',
         '31' => 'emergency_contact_phone',
         '32' => 'emergency_contact_address',
