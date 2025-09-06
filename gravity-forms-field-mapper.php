@@ -46,7 +46,7 @@ function get_security_guard_form_field_mappings() {
         
         // Personal Information
         '11' => 'type_of_company',
-        '12' => 'social_security_number',
+        '12' => 'fein_number',
         '14' => 'drivers_license_number',
         '15' => 'drivers_license_state',
         '16' => 'drivers_license_expiration',
