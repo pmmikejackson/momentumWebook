@@ -53,7 +53,7 @@ function get_security_guard_form_field_mappings() {
         '17' => 'height',
         '18' => 'percent_security_service',
         '19' => 'percent_investigations',
-        '20' => 'eye_color',
+        '20' => 'percent_consulting',
         '21' => 'gender',
         '22' => 'marital_status',
         '23' => 'citizenship_status',
