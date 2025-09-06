@@ -70,7 +70,7 @@ function get_security_guard_form_field_mappings() {
         
         // Employment History
         '33' => 'current_employer',
-        '34' => 'current_position',
+        '34' => 'officers_per_supervisor',
         '37' => 'employer_phone',
         '38' => 'employer_address',
         '39' => 'employment_start_date',
