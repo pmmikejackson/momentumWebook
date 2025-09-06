@@ -57,7 +57,7 @@ function get_security_guard_form_field_mappings() {
         '21' => 'gender',
         '22' => 'each_occurrence',
         '23' => 'aggregate',
-        '24' => 'military_service',
+        '24' => 'other_services',
         '25' => 'military_branch',
         '26' => 'military_discharge_type',
         '27' => 'military_discharge_date',
