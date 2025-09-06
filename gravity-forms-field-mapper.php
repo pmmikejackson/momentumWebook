@@ -37,7 +37,7 @@ function get_security_guard_form_field_mappings() {
         '3.6' => 'mailing_country',
         
         // Contact Information
-        '5' => 'home_phone',
+        '5' => 'title',
         '6' => 'cell_phone',
         '7' => 'work_phone',
         '8' => 'fax_number',
