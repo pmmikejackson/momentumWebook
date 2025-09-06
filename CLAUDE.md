@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Repository Information
+
+- **GitHub Account**: pmmikejackson
+- **Repository**: momentumWebook
+
 ## Project Overview
 
 This is a WordPress plugin/code snippet that enhances webhook payloads by converting field IDs to human-readable field names. It specifically focuses on Gravity Forms integration for Security Guard, Alarm Monitoring, and Private Investigator application forms (Form IDs 10, 11, 12).
