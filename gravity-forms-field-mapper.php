@@ -17,6 +17,8 @@ if (!defined('ABSPATH')) {
  */
 function get_security_guard_form_field_mappings() {
     return array(
+    //section 1 - General Information
+       
         // Basic Information
         '1' => 'company_name',
         '2' => 'applicant_address',
@@ -45,7 +47,7 @@ function get_security_guard_form_field_mappings() {
         '10' => 'date_coverage_needed',
         
         // Personal Information
-        '11' => 'type_of_company',
+        '11' => 'bus_type',
         '12' => 'fein_number',
         '14' => 'license_number',
         '15' => 'years_under_this_name',
@@ -54,192 +56,174 @@ function get_security_guard_form_field_mappings() {
         '18' => 'percent_security_service',
         '19' => 'percent_investigations',
         '20' => 'percent_consulting',
-        '21' => 'gender',
+        '21' => 'alarm_service_monitoring',
         '22' => 'each_occurrence',
         '23' => 'aggregate',
         '24' => 'other_services',
-        '25' => 'military_branch',
-        '26' => 'military_discharge_type',
+        '25' => 'other_services_details',
+        '26' => 'five_largest_clients',
         '27' => 'most_clients_under_contract',
-        
-        // Emergency Contact
         '29' => 'workers_comp_in_force',
-        '30' => 'emergency_contact_relationship',
-        '31' => 'emergency_contact_phone',
-        '32' => 'principals_perform_duties',
+        '30' => 'no_workers_comp_reason',
         
-        // Employment History
-        '33' => 'current_employer',
+    //section 2 - Operations
+
+        '31' => 'owner_partner_percentages',
+        '32' => 'principals_perform_duties',
+        '33' => 'supervisor_duties',
         '34' => 'officers_per_supervisor',
         '37' => 'employer_phone',
-        '38' => 'employer_address',
-        '39' => 'employment_start_date',
-        '40' => 'employment_end_date',
-        '41' => 'reason_for_leaving',
-        '42' => 'supervisor_name',
-        '43' => 'supervisor_phone',
-        '44' => 'may_contact_employer',
+        '38' => 'annual_unarm_bill',
+        '39' => 'annual_arm_bill',
+        '40' => 'ft_offc',
+        '41' => 'pt_offc',
+        '42' => 'unarm_offc',
+        '43' => 'arm_offc',
+        '44' => 'use_golfcart',
+        '45' => 'have_lights',
+        '46' => 'public_transport',
+        '47' => 'driving_record_checked',
+        '48' => 'use_dogs',
+        '49' => 'dog_w_handler',
+        '50' => 'dog_wo_handler',
+        '51' => 'taser',
+        '52' => 'jewelry_money_furs',
+        '53' => 'associations',
         
-        // Previous Employment
-        '45' => 'previous_employer',
-        '46' => 'previous_position',
-        '47' => 'previous_employer_phone',
-        '48' => 'previous_employer_address',
-        '49' => 'previous_employment_start_date',
-        '50' => 'previous_employment_end_date',
-        '51' => 'previous_reason_for_leaving',
-        '52' => 'previous_supervisor_name',
-        '53' => 'previous_supervisor_phone',
+    //section 3 - Payroll Details
+
+        '54' => 'independent_contractor',
+        '55' => 'independent_contractor_salaries',
+       
+       //Unarmed Payroll
+        '56' => 'ua_airport_non_public',
+        '57' => 'ua_airport_public',
+        '58' => 'ua_armored_car',
+        '59' => 'ua_banks',
+        '60' => 'ua_bounty_hunter',
+        '61' => 'ua_car_dealers',
+        '62' => 'ua_churches',
+        '63' => 'ua_construction',
+        '64' => 'ua_convention',
+        '65' => 'ua_crim_detention',
+        '65' => 'ua_executive_protection',
+        '67' => 'ua_fast_food',
+        '68' => 'ua_federal_government',
+        '69' => 'ua_retirement_homes',
+        '70' => 'ua_govt_housing',
+        '71' => 'ua_hotels_motels',
+        '72' => 'ua_industrial',
+        '73' => 'ua_institutional',
+        '74' => 'ua_liquor',
+        '75' => 'ua_local_state',
+        '76' => 'ua_mid_high_housing',
+        '77' => 'ua_museums',
+        '78' => 'ua_office_buildings',
+        '79' => 'ua_patrol_cars',
+        '80' => 'ua_restaurants',
+        '81' => 'ua_retail_out',
+        '82' => 'ua_retail_in',
+        '83' => 'ua_schools',
+        '84' => 'ua_special_events',
+        '85' => 'ua_strike_duty',
+        '86' => 'ua_traffic_control',
+        '87' => 'ua_transport_courier',
+        '88' => 'ua_trucking_term',
+        '89' => 'ua_waterfront',
+        '210' => 'ua_other',
+        '126' => 'ua_exec_protection',
+        '127' => 'ua_pre_employment',
+        '128' => 'ua_lie_detect',
+        '129' => 'ua_process_server',
+        '130' => 'ua_sec_consult',
+        '131' => 'ua_total_pay',
+
         
-        // Education
-        '54' => 'high_school_name',
-        '55' => 'high_school_graduation_year',
-        '56' => 'college_name',
-        '57' => 'college_degree',
-        '58' => 'college_graduation_year',
-        '59' => 'other_education',
+        // Armed Payroll
+        '91' => 'a_airport_non_public',
+        '92' => 'a_airport_public',
+        '93' => 'a_armored_car',
+        '94' => 'a_banks',
+        '95' => 'a_bounty_hunter',
+        '95' => 'a_car_dealers',
+        '97' => 'a_churches',
+        '98' => 'a_construction',
+        '99' => 'a_convention',
+        '100' => 'a_crim_detention',
+        '101' => 'a_executive_protection',
+        '102' => 'a_fast_food',
+        '103' => 'a_federal_government',
+        '104' => 'a_retirement_homes',
+        '105' => 'a_govt_housing',
+        '106' => 'a_hotels_motels',
+        '107' => 'a_industrial',
+        '108' => 'a_institutional',
+        '109' => 'a_liquor',
+        '110' => 'a_local_state',
+        '111' => 'a_mid_high_housing',
+        '112' => 'a_museums',
+        '113' => 'a_office_buildings',
+        '114' => 'a_patrol_cars',
+        '115' => 'a_restaurants',
+        '116' => 'a_retail_out',
+        '117' => 'a_retail_in',
+        '118' => 'a_schools',
+        '119' => 'a_special_events',
+        '120' => 'a_strike_duty',
+        '121' => 'a_traffic_control',
+        '122' => 'a_transport_courier',
+        '123' => 'a_trucking_term',
+        '124' => 'a_waterfront',
+        '125' => 'a_other',
+        '132' => 'a_exec_protection',
+        '133' => 'a_pre_employment',
+        '134' => 'a_lie_detect',
+        '135' => 'a_process_server',
+        '136' => 'a_sec_consult',
+        '137' => 'a_total_pay',
         
-        // Security Guard Experience
-        '60' => 'security_guard_license_number',
-        '61' => 'security_guard_license_state',
-        '62' => 'security_guard_license_expiration',
-        '63' => 'years_security_experience',
-        '64' => 'armed_guard_certification',
-        '65' => 'firearm_permit_number',
-        '66' => 'firearm_permit_expiration',
-        '67' => 'security_training_completed',
-        '68' => 'cpr_certification',
-        '69' => 'first_aid_certification',
-        '70' => 'other_certifications',
-        
-        // References
-        '71' => 'reference_1_name',
-        '72' => 'reference_1_phone',
-        '73' => 'reference_1_email',
-        '74' => 'reference_1_relationship',
-        '75' => 'reference_1_years_known',
-        
-        '76' => 'reference_2_name',
-        '77' => 'reference_2_phone',
-        '78' => 'reference_2_email',
-        '79' => 'reference_2_relationship',
-        '80' => 'reference_2_years_known',
-        
-        '81' => 'reference_3_name',
-        '82' => 'reference_3_phone',
-        '83' => 'reference_3_email',
-        '84' => 'reference_3_relationship',
-        '85' => 'reference_3_years_known',
-        
-        // Criminal History
-        '86' => 'criminal_convictions',
-        '87' => 'conviction_details',
-        '88' => 'pending_charges',
-        '89' => 'pending_charges_details',
-        
-        // Availability
-        '91' => 'available_monday',
-        '92' => 'available_tuesday',
-        '93' => 'available_wednesday',
-        '94' => 'available_thursday',
-        '95' => 'available_friday',
-        '96' => 'available_saturday',
-        '97' => 'available_sunday',
-        '98' => 'available_days',
-        '99' => 'available_nights',
-        '100' => 'available_weekends',
-        '101' => 'available_holidays',
-        '102' => 'available_overtime',
-        '103' => 'preferred_shift',
-        '104' => 'date_available_to_start',
-        
-        // Additional Information
-        '105' => 'how_did_you_hear_about_us',
-        '106' => 'referred_by',
-        '107' => 'previously_applied',
-        '108' => 'previous_application_date',
-        '109' => 'previously_employed_here',
-        '110' => 'previous_employment_dates',
-        '111' => 'reason_for_interest',
-        '112' => 'salary_requirements',
-        '113' => 'willing_to_relocate',
-        '114' => 'willing_to_travel',
-        '115' => 'travel_percentage',
-        
-        // Skills and Qualifications
-        '116' => 'computer_skills',
-        '117' => 'language_skills',
-        '118' => 'special_skills',
-        '119' => 'physical_limitations',
-        '120' => 'accommodation_needs',
-        
-        // Legal Authorization
-        '121' => 'authorized_to_work_us',
-        '122' => 'require_sponsorship',
-        '123' => 'age_18_or_older',
-        '124' => 'agree_background_check',
-        '125' => 'agree_drug_test',
-        '126' => 'agree_to_terms',
-        
-        // Additional Questions
-        '127' => 'additional_question_1',
-        '128' => 'additional_question_2',
-        '129' => 'additional_question_3',
-        '130' => 'additional_comments',
-        
-        // Insurance Related
-        '131' => 'insurance_amount',
-        '132' => 'insurance_type',
-        '133' => 'insurance_carrier',
-        '134' => 'policy_number',
-        '135' => 'coverage_start_date',
-        '136' => 'coverage_end_date',
-        '137' => 'premium_amount',
-        '138' => 'deductible_amount',
-        '139' => 'beneficiary_name',
-        '140' => 'beneficiary_relationship',
-        '141' => 'beneficiary_contact',
-        
+        '138' => 'avg_hour_wage_ft',
+        '139' => 'avg_hour_wage_pt',
+        '140' => 'ann_corp_rev_ft',
+        '141' => 'alarm_oper_est_rev',
+      
+    //section 4 - Description of Operations
+    
         // Additional Fields
-        '151' => 'field_151',
-        '152' => 'field_152',
-        '153' => 'field_153',
-        '154' => 'field_154',
-        '155' => 'field_155',
-        '156' => 'field_156',
-        '157' => 'field_157',
-        '158' => 'field_158',
-        '159' => 'field_159',
-        '160' => 'field_160',
-        '161' => 'field_161',
-        '162' => 'field_162',
-        '164' => 'field_164',
-        '165' => 'field_165',
-        '167' => 'field_167',
+        '191' => 'airport_work_details',
+        '192' => 'apartment_work_details',
+        '193' => 'retail_work_details',
+        '194' => 'criminal_work_details',
+        '195' => 'special_events_work_details',
+        '196' => 'bodyguard_work_details',
+        '197' => 'athlete_celeb',
+        '198' => 'security_consulting_work_details',
+        '199' => 'other_work_details',
+        
         '168' => 'application_date',
         '169' => 'field_169',
         '170' => 'field_170',
         '171' => 'field_171',
-        '172' => 'field_172',
+        '172' => 'holdharmless',
         '173' => 'field_173',
         
         // Additional compound fields
-        '174' => 'compound_field_174',
-        '174.1' => 'compound_174_part_1',
-        '174.2' => 'compound_174_part_2',
-        '174.3' => 'compound_174_part_3',
-        '174.4' => 'compound_174_part_4',
-        '174.5' => 'compound_174_part_5',
-        '174.6' => 'compound_174_part_6',
-        '174.7' => 'compound_174_part_7',
+        '174' => 'employee_training',
+        '174.1' => 'employee_training_part_1',
+        '174.2' => 'employee_training_part_2',
+        '174.3' => 'employee_training_part_3',
+        '174.4' => 'employee_training_part_4',
+        '174.5' => 'employee_training_part_5',
+        '174.6' => 'employee_training_part_6',
+        '174.7' => 'employee_training_part_7',
         
-        '175' => 'compound_field_175',
-        '175.1' => 'compound_175_part_1',
-        '175.2' => 'compound_175_part_2',
-        '175.3' => 'compound_175_part_3',
-        '175.4' => 'compound_175_part_4',
-        '175.5' => 'compound_175_part_5',
-        '175.6' => 'compound_175_part_6',
+        '175' => 'pre_screen',
+        '175.1' => 'pre_screen_part_1',
+        '175.2' => 'pre_screen_part_2',
+        '175.3' => 'pre_screen_part_3',
+        '175.4' => 'pre_screen_part_4',
+        '175.5' => 'pre_screen_part_5',
+        '175.6' => 'pre_screen_part_6',
         
         '176' => 'field_176',
         '177' => 'field_177',
@@ -266,7 +250,6 @@ function get_security_guard_form_field_mappings() {
         '199' => 'field_199',
         '200' => 'AgencyID',
         '201' => 'Form Name',
-        '202' => 'field_202',
         
         // Name fields
         '203' => 'applicant_name',
@@ -301,8 +284,6 @@ function get_security_guard_form_field_mappings() {
         'is_read' => 'is_read',
         'ip' => 'ip_address',
         'source_url' => 'source_url',
-        'user_agent' => 'user_agent',
-        'currency' => 'currency',
         'payment_status' => 'payment_status',
         'payment_date' => 'payment_date',
         'payment_amount' => 'payment_amount',
@@ -312,7 +293,6 @@ function get_security_guard_form_field_mappings() {
         'created_by' => 'created_by_user_id',
         'transaction_type' => 'transaction_type',
         'status' => 'entry_status',
-        'source_id' => 'source_id',
         'unique_id' => 'AgencyID',
         'form_title' => 'Form Name',
         
@@ -362,9 +342,17 @@ function transform_gravity_forms_webhook($data, $form_id = null) {
             break;
     }
     
+    // Fields to exclude from the webhook payload
+    $excluded_fields = array('id', 'form_id', 'is_starred', 'is_read', 'ip', 'user_agent', 'currency', 'source_id', '202');
+    
     $transformed = array();
     
     foreach ($data as $field_id => $value) {
+        // Skip excluded fields
+        if (in_array($field_id, $excluded_fields)) {
+            continue;
+        }
+        
         // Skip empty values
         if ($value === '' || $value === null) {
             continue;
