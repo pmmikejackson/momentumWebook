@@ -11,6 +11,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a WordPress plugin/code snippet that enhances webhook payloads by converting field IDs to human-readable field names. It specifically focuses on Gravity Forms integration for Security Guard, Alarm Monitoring, and Private Investigator application forms (Form IDs 10, 11, 12).
 
+**Current Version**: 1.0.9  
+**Branch**: feature/update-field-mappings
+
 ## Architecture
 
 ### Main Components
@@ -40,13 +43,46 @@ This is a WordPress plugin with no build process. To develop:
 
 3. **Deployment**: Direct file upload to WordPress installation
 
-## Important Field Mappings
+## Version Management
 
-The plugin maps Gravity Forms field IDs to semantic names:
-- System fields: `unique_id` → `AgencyID`, `form_title` → `Form Name`
+**IMPORTANT RULE**: Always increment the version number in `gravity-forms-field-mapper.php` when building a release:
+- Update the version comment at the top of the file (e.g., `Version: 1.0.9` → `Version: 1.0.10`)
+- Create a corresponding release zip file with the new version number
+- Create a GitHub release with detailed release notes
+- Tag releases appropriately (e.g., `v1.0.9`)
+
+Current versioning pattern: `1.0.x` for feature updates and field mapping changes.
+
+## Field Mapping Structure
+
+The plugin is organized into 5 main sections:
+
+### Section 1 - General Information
+- Basic company information, addresses, contact details
+- Personal information and business type classifications
+
+### Section 2 - Operations  
+- Supervisor duties, officer counts, equipment usage
+- Annual billing information for armed/unarmed services
+
+### Section 3 - Payroll Details
+- Comprehensive armed/unarmed payroll classifications
+- Wage information and contractor details
+
+### Section 4 - Description of Operations
+- Detailed work descriptions for various scenarios (airport, retail, etc.)
+- Special event and consulting work details
+
+### Section 5 - Current Insurance Information  
+- Coverage details, claims history, liability limits
+- Premium and deductible information
+
+### Key Field Examples:
+- System fields: `unique_id` → `AgencyID`, `form_title` → `form_name`
 - Name fields with subfields (e.g., `203.3` → `applicant_first_name`)
 - Address fields with subfields (e.g., `2.3` → `city`)
 - PDF field: `gpdf_65981c1a21d80` → `generated_pdf_url`
+- Excluded fields: `entry_id`, `form_id`, `is_starred`, `is_read`, `ip_address`, `user_agent`, `currency`, `source_id`
 
 ## Webhook Integration
 
