@@ -178,26 +178,53 @@ function mwm_admin_page() {
     }
     
     // Handle bulk resend
-    if (isset($_POST['bulk_action']) && $_POST['bulk_action'] === 'resend' && wp_verify_nonce($_POST['mwm_nonce'], 'mwm_bulk')) {
-        if (!empty($_POST['entries'])) {
-            $success_count = 0;
-            $fail_count = 0;
-            
-            foreach ($_POST['entries'] as $entry_data) {
-                list($entry_id, $form_id) = explode(':', $entry_data);
-                $result = mwm_send_entry_to_webhook(intval($entry_id), intval($form_id), true);
+    if (isset($_POST['bulk_action']) && wp_verify_nonce($_POST['mwm_nonce'], 'mwm_bulk')) {
+        $bulk_action = $_POST['bulk_action'];
+        
+        if ($bulk_action === 'resend') {
+            if (!empty($_POST['entries'])) {
+                $success_count = 0;
+                $fail_count = 0;
                 
-                if ($result['success']) {
-                    $success_count++;
-                } else {
-                    $fail_count++;
+                foreach ($_POST['entries'] as $entry_data) {
+                    list($entry_id, $form_id) = explode(':', $entry_data);
+                    $result = mwm_send_entry_to_webhook(intval($entry_id), intval($form_id), true);
+                    
+                    if ($result['success']) {
+                        $success_count++;
+                    } else {
+                        $fail_count++;
+                    }
                 }
+                
+                $message = sprintf('Bulk resend completed: %d successful, %d failed', $success_count, $fail_count);
+                echo '<div class="notice notice-info"><p>' . esc_html($message) . '</p></div>';
+            } else {
+                echo '<div class="notice notice-warning"><p>No entries selected for bulk action.</p></div>';
             }
+        } elseif (in_array($bulk_action, array('resend_all', 'resend_all_not_sent', 'resend_all_failed'))) {
+            // Handle resend all variations
+            $entries_to_process = mwm_get_all_entries_for_bulk_action($selected_form, $selected_status, $bulk_action);
             
-            $message = sprintf('Bulk resend completed: %d successful, %d failed', $success_count, $fail_count);
-            echo '<div class="notice notice-info"><p>' . esc_html($message) . '</p></div>';
-        } else {
-            echo '<div class="notice notice-warning"><p>No entries selected for bulk action.</p></div>';
+            if (!empty($entries_to_process)) {
+                $success_count = 0;
+                $fail_count = 0;
+                
+                foreach ($entries_to_process as $entry) {
+                    $result = mwm_send_entry_to_webhook($entry['id'], $entry['form_id'], true);
+                    
+                    if ($result['success']) {
+                        $success_count++;
+                    } else {
+                        $fail_count++;
+                    }
+                }
+                
+                $message = sprintf('Bulk resend ALL completed: %d successful, %d failed out of %d total entries', $success_count, $fail_count, count($entries_to_process));
+                echo '<div class="notice notice-success"><p>' . esc_html($message) . '</p></div>';
+            } else {
+                echo '<div class="notice notice-warning"><p>No entries found to process.</p></div>';
+            }
         }
     }
     
@@ -221,28 +248,52 @@ function mwm_admin_page() {
         $selected_form = isset($_GET['form_id']) ? intval($_GET['form_id']) : 0;
         $selected_status = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : 'all';
         $page_num = isset($_GET['pagenum']) ? intval($_GET['pagenum']) : 1;
-        $per_page = 25;
+        $per_page = isset($_GET['per_page']) ? intval($_GET['per_page']) : 25;
+        
+        // Validate per_page options
+        if (!in_array($per_page, array(25, 50, 100, 200, 500))) {
+            $per_page = 25;
+        }
         ?>
         
         <form method="get" action="" style="margin-bottom: 20px;">
             <input type="hidden" name="page" value="mwm-webhook-manager" />
             
-            <select name="form_id" onchange="this.form.submit()">
-                <option value="0">All Forms</option>
-                <option value="1" <?php selected($selected_form, 1); ?>>Old Alarm Monitoring (1)</option>
-                <option value="2" <?php selected($selected_form, 2); ?>>Old Private Investigator (2)</option>
-                <option value="3" <?php selected($selected_form, 3); ?>>Old Security Guard (3)</option>
-                <option value="10" <?php selected($selected_form, 10); ?>>Security Guard (10)</option>
-                <option value="11" <?php selected($selected_form, 11); ?>>Alarm Monitoring (11)</option>
-                <option value="12" <?php selected($selected_form, 12); ?>>Private Investigator (12)</option>
-            </select>
-            
-            <select name="status" onchange="this.form.submit()">
-                <option value="all">All Statuses</option>
-                <option value="sent" <?php selected($selected_status, 'sent'); ?>>Sent</option>
-                <option value="not_sent" <?php selected($selected_status, 'not_sent'); ?>>Not Sent</option>
-                <option value="failed" <?php selected($selected_status, 'failed'); ?>>Failed</option>
-            </select>
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <div>
+                    <label for="form_id" style="font-weight: bold;">Form:</label>
+                    <select name="form_id" id="form_id" onchange="this.form.submit()">
+                        <option value="0">All Forms</option>
+                        <option value="1" <?php selected($selected_form, 1); ?>>Old Alarm Monitoring (1)</option>
+                        <option value="2" <?php selected($selected_form, 2); ?>>Old Private Investigator (2)</option>
+                        <option value="3" <?php selected($selected_form, 3); ?>>Old Security Guard (3)</option>
+                        <option value="10" <?php selected($selected_form, 10); ?>>Security Guard (10)</option>
+                        <option value="11" <?php selected($selected_form, 11); ?>>Alarm Monitoring (11)</option>
+                        <option value="12" <?php selected($selected_form, 12); ?>>Private Investigator (12)</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="status" style="font-weight: bold;">Status:</label>
+                    <select name="status" id="status" onchange="this.form.submit()">
+                        <option value="all">All Statuses</option>
+                        <option value="sent" <?php selected($selected_status, 'sent'); ?>>Sent</option>
+                        <option value="not_sent" <?php selected($selected_status, 'not_sent'); ?>>Not Sent</option>
+                        <option value="failed" <?php selected($selected_status, 'failed'); ?>>Failed</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="per_page" style="font-weight: bold;">Show:</label>
+                    <select name="per_page" id="per_page" onchange="this.form.submit()">
+                        <option value="25" <?php selected($per_page, 25); ?>>25 per page</option>
+                        <option value="50" <?php selected($per_page, 50); ?>>50 per page</option>
+                        <option value="100" <?php selected($per_page, 100); ?>>100 per page</option>
+                        <option value="200" <?php selected($per_page, 200); ?>>200 per page</option>
+                        <option value="500" <?php selected($per_page, 500); ?>>500 per page</option>
+                    </select>
+                </div>
+            </div>
         </form>
         
         <?php
@@ -292,6 +343,13 @@ function mwm_admin_page() {
         
         // Apply pagination
         $entries = array_slice($all_entries, ($page_num - 1) * $per_page, $per_page);
+        
+        // Store filter params for pagination links
+        $filter_params = array(
+            'form_id' => $selected_form,
+            'status' => $selected_status,
+            'per_page' => $per_page
+        );
         ?>
         
         <form method="post" action="<?php echo admin_url('admin.php?page=mwm-webhook-manager'); ?>">
@@ -302,6 +360,13 @@ function mwm_admin_page() {
                     <select name="bulk_action" id="bulk-action-selector">
                         <option value="">Bulk Actions</option>
                         <option value="resend">Resend Selected</option>
+                        <option value="resend_all">Resend All <?php echo $total_count; ?> Entries</option>
+                        <?php if ($selected_status === 'not_sent'): ?>
+                            <option value="resend_all_not_sent">Resend All Not Sent (<?php echo $total_count; ?>)</option>
+                        <?php endif; ?>
+                        <?php if ($selected_status === 'failed'): ?>
+                            <option value="resend_all_failed">Resend All Failed (<?php echo $total_count; ?>)</option>
+                        <?php endif; ?>
                     </select>
                     <input type="submit" name="apply_bulk" class="button action" value="Apply">
                 </div>
@@ -311,23 +376,31 @@ function mwm_admin_page() {
                     <?php
                     $total_pages = ceil($total_count / $per_page);
                     if ($total_pages > 1) {
-                        $base_url = add_query_arg(array(
-                            'page' => 'mwm-webhook-manager',
-                            'form_id' => $selected_form,
-                            'status' => $selected_status
-                        ), admin_url('admin.php'));
+                        $base_params = array_merge(array('page' => 'mwm-webhook-manager'), $filter_params);
+                        $base_url = add_query_arg($base_params, admin_url('admin.php'));
                         
                         echo '<span class="pagination-links">';
                         if ($page_num > 1) {
-                            echo '<a class="prev-page" href="' . add_query_arg('pagenum', $page_num - 1, $base_url) . '">‹</a> ';
+                            echo '<a class="prev-page button" href="' . add_query_arg('pagenum', $page_num - 1, $base_url) . '">‹ Previous</a> ';
                         }
                         
-                        echo '<span class="paging-input">';
-                        echo $page_num . ' of ' . $total_pages;
-                        echo '</span>';
+                        // Show page numbers for small datasets, or just current/total for large ones
+                        if ($total_pages <= 10) {
+                            for ($i = 1; $i <= $total_pages; $i++) {
+                                if ($i == $page_num) {
+                                    echo '<span class="current" style="padding: 3px 5px; background: #0073aa; color: white; border-radius: 3px; margin: 0 2px;">' . $i . '</span> ';
+                                } else {
+                                    echo '<a href="' . add_query_arg('pagenum', $i, $base_url) . '" style="padding: 3px 5px; text-decoration: none; border: 1px solid #ccc; margin: 0 2px;">' . $i . '</a> ';
+                                }
+                            }
+                        } else {
+                            echo '<span class="paging-input">';
+                            echo 'Page ' . $page_num . ' of ' . $total_pages;
+                            echo '</span>';
+                        }
                         
                         if ($page_num < $total_pages) {
-                            echo ' <a class="next-page" href="' . add_query_arg('pagenum', $page_num + 1, $base_url) . '">›</a>';
+                            echo ' <a class="next-page button" href="' . add_query_arg('pagenum', $page_num + 1, $base_url) . '">Next ›</a>';
                         }
                         echo '</span>';
                     }
@@ -338,7 +411,10 @@ function mwm_admin_page() {
             <table class="wp-list-table widefat fixed striped">
                 <thead>
                     <tr>
-                        <th class="check-column"><input type="checkbox" id="select-all" /></th>
+                        <th class="check-column">
+                            <input type="checkbox" id="select-all" />
+                            <br><small style="font-weight: normal;">Page (<?php echo count($entries); ?>)</small>
+                        </th>
                         <th>ID</th>
                         <th>Form</th>
                         <th>Company</th>
@@ -433,11 +509,21 @@ function mwm_admin_page() {
                 return false;
             }
             
-            var checked = $('input[name="entries[]"]:checked').length;
-            if (checked === 0) {
-                e.preventDefault();
-                alert('Please select at least one entry.');
-                return false;
+            // Handle "resend all" actions differently
+            if (action.startsWith('resend_all')) {
+                var confirmMessage = 'This will attempt to resend ALL entries matching your current filters. This may take several minutes for large datasets. Continue?';
+                if (!confirm(confirmMessage)) {
+                    e.preventDefault();
+                    return false;
+                }
+            } else if (action === 'resend') {
+                // For regular resend, check if entries are selected
+                var checked = $('input[name="entries[]"]:checked').length;
+                if (checked === 0) {
+                    e.preventDefault();
+                    alert('Please select at least one entry.');
+                    return false;
+                }
             }
         });
     });
@@ -796,6 +882,68 @@ function mwm_test_webhook() {
             'message' => 'Webhook returned error code: ' . $response_code
         );
     }
+}
+
+/**
+ * Get all entries for bulk actions (handles large datasets)
+ */
+function mwm_get_all_entries_for_bulk_action($selected_form, $selected_status, $bulk_action) {
+    $search_criteria = array('status' => 'active');
+    $sorting = array('key' => 'date_created', 'direction' => 'DESC');
+    
+    $all_entries = array();
+    $form_ids = $selected_form > 0 ? array($selected_form) : array(1, 2, 3, 10, 11, 12);
+    
+    foreach ($form_ids as $form_id) {
+        if (!GFAPI::form_id_exists($form_id)) {
+            continue;
+        }
+        
+        $entries = GFAPI::get_entries($form_id, $search_criteria, $sorting);
+        
+        // Filter entries based on bulk action type
+        $filtered_entries = array();
+        foreach ($entries as $entry) {
+            $webhook_status = gform_get_meta($entry['id'], 'mwm_webhook_status');
+            
+            $include_entry = false;
+            
+            switch ($bulk_action) {
+                case 'resend_all':
+                    $include_entry = true;
+                    break;
+                case 'resend_all_not_sent':
+                    $include_entry = empty($webhook_status);
+                    break;
+                case 'resend_all_failed':
+                    $include_entry = ($webhook_status === 'failed');
+                    break;
+            }
+            
+            // Also filter by selected status if needed
+            if ($include_entry && $selected_status !== 'all') {
+                switch ($selected_status) {
+                    case 'sent':
+                        $include_entry = ($webhook_status === 'sent');
+                        break;
+                    case 'not_sent':
+                        $include_entry = empty($webhook_status);
+                        break;
+                    case 'failed':
+                        $include_entry = ($webhook_status === 'failed');
+                        break;
+                }
+            }
+            
+            if ($include_entry) {
+                $filtered_entries[] = $entry;
+            }
+        }
+        
+        $all_entries = array_merge($all_entries, $filtered_entries);
+    }
+    
+    return $all_entries;
 }
 
 /**
