@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Momentum Webhook Manager
  * Description: Manages automatic sending and manual resending of Gravity Forms entries to Momentum webhook
- * Version: 1.2.4
+ * Version: 1.2.3
  * Author: Momentum Integration
  * 
  * This plugin provides:
@@ -1427,11 +1427,12 @@ function mwm_dashboard_widget_content() {
         <?php endif; ?>
         
         <div class="mwm-actions" style="text-align: center;">
-            <a href="<?php echo admin_url('admin.php?page=mwm-webhook-manager'); ?>" class="button button-primary">Manage Entries</a>
+            <a href="<?php echo admin_url('admin.php?page=mwm-webhook-manager'); ?>" class="button button-primary">Manage Webhooks</a>
             <a href="<?php echo admin_url('admin.php?page=mwm-settings'); ?>" class="button">Settings</a>
+            
             <?php if ($total_not_sent > 0): ?>
                 <a href="<?php echo admin_url('admin.php?page=mwm-webhook-manager&status=not_sent'); ?>" 
-                   class="button button-secondary">Send Pending (<?php echo $total_not_sent; ?>)</a>
+                   class="button button-secondary" style="margin-top: 5px;">Send Pending (<?php echo $total_not_sent; ?>)</a>
             <?php endif; ?>
             
             <?php if ($total_failed > 0): ?>
