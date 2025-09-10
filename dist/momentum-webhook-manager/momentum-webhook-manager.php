@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Momentum Webhook Manager
  * Description: Manages automatic sending and manual resending of Gravity Forms entries to Momentum webhook
- * Version: 1.2.2
+ * Version: 1.2.1
  * Author: Momentum Integration
  * 
  * This plugin provides:
@@ -459,8 +459,6 @@ function mwm_admin_page() {
                         <?php endif; ?>
                     </select>
                     <input type="submit" name="apply_bulk" class="button action" value="Apply">
-                    <a href="#" id="mwm-page-read-top" class="button-link mwm-page-link" title="Mark all entries on this page as read">Mark page read</a>
-                    <a href="#" id="mwm-page-unread-top" class="button-link mwm-page-link" title="Mark all entries on this page as unread">Mark page unread</a>
                 </div>
                 
                 <div class="tablenav-pages">
@@ -516,6 +514,8 @@ function mwm_admin_page() {
                         <th class="check-column">
                             <input type="checkbox" id="select-all" />
                             <br><small style="font-weight: normal;">Page (<?php echo count($entries); ?>)</small>
+                            <br><a href="#" id="mwm-mark-page-read" class="mwm-quick-link">Mark page read</a>
+                            <br><a href="#" id="mwm-mark-page-unread" class="mwm-quick-link">Mark page unread</a>
                         </th>
                         <th>ID</th>
                         <th>Form</th>
@@ -626,8 +626,6 @@ function mwm_admin_page() {
                         <?php endif; ?>
                     </select>
                     <input type="submit" name="apply_bulk" class="button action" value="Apply">
-                    <a href="#" id="mwm-page-read-bottom" class="button-link mwm-page-link" title="Mark all entries on this page as read">Mark page read</a>
-                    <a href="#" id="mwm-page-unread-bottom" class="button-link mwm-page-link" title="Mark all entries on this page as unread">Mark page unread</a>
                 </div>
             </div>
         </form>
@@ -684,11 +682,11 @@ function mwm_admin_page() {
             // Submit the form via the Apply button to reuse handlers
             $('input[name="apply_bulk"]').trigger('click');
         }
-        $('#mwm-page-read-top, #mwm-page-read-bottom').on('click', function(e) {
+        $('#mwm-mark-page-read').on('click', function(e) {
             e.preventDefault();
             mwmSubmitPageMark('mark_read');
         });
-        $('#mwm-page-unread-top, #mwm-page-unread-bottom').on('click', function(e) {
+        $('#mwm-mark-page-unread').on('click', function(e) {
             e.preventDefault();
             mwmSubmitPageMark('mark_unread');
         });
@@ -697,7 +695,8 @@ function mwm_admin_page() {
     <style>
     /* Bold rows that have not been sent to the webhook */
     tr.mwm-not-sent td { font-weight: 600; }
-    .mwm-page-link { margin-left: 8px; }
+    .mwm-quick-link { font-size: 11px; text-decoration: none; }
+    .mwm-quick-link:hover { text-decoration: underline; }
     .mwm-read-dot { color: #00a32a; font-size: 16px; line-height: 1; }
     .mwm-unread-dot { color: #d63638; font-size: 16px; line-height: 1; }
     .mwm-legend { margin: 8px 0 6px; color: #555; font-size: 12px; }
