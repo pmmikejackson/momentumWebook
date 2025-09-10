@@ -303,7 +303,7 @@ function get_security_guard_form_field_mappings() {
 	'213' => 'field_213',
 	'214' => 'field_214',
 	'215' => 'field_215',
-	'216' => 'years_of_experience',
+	'216' => 'business_start_date',
 	
 	// System fields
 	'id' => 'entry_id',
