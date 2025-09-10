@@ -1,10 +1,22 @@
 <?php
 /**
  * Gravity Forms Field Mapper for Momentum Webhook
- * Version: 1.0.9
+ * Version: 1.1.0
  * 
  * This file maps Gravity Forms field IDs to proper field names
- * for the Security Guard Application forms (Form IDs 10, 11, 12)
+ * for all supported forms (Form IDs 1, 2, 3, 10, 11, 12)
+ * 
+ * Release Notes:
+ * 
+ * Version 1.1.0 (Current)
+ * - Added support for Forms 1, 2, and 3 with custom field mappings
+ * - Added automatic webhook hooks for Forms 1, 2, 3
+ * - Expanded form support beyond just security applications
+ * - Added basic field mappings for general form types
+ * 
+ * Version 1.0.9
+ * - Initial field mapping implementation for Forms 10, 11, 12
+ * - Support for Security Guard, Alarm Monitoring, Private Investigator applications
  */
 
 // Prevent direct access
@@ -322,6 +334,74 @@ function get_private_investigator_form_field_mappings() {
 }
 
 /**
+ * Get field mappings for Form 1
+ */
+function get_form_1_field_mappings() {
+    // Basic field mappings for Form 1
+    // Can be customized based on your form structure
+    return array(
+        '1' => 'company_name',
+        '2' => 'contact_name', 
+        '3' => 'email_address',
+        '4' => 'phone_number',
+        '5' => 'message',
+        '6' => 'form_title',
+        '7' => 'date_submitted',
+        // Add more fields as needed
+        'id' => 'entry_id',
+        'form_id' => 'form_id',
+        'date_created' => 'date_created',
+        'ip' => 'ip_address',
+        'source_url' => 'source_url'
+    );
+}
+
+/**
+ * Get field mappings for Form 2  
+ */
+function get_form_2_field_mappings() {
+    // Basic field mappings for Form 2
+    // Can be customized based on your form structure
+    return array(
+        '1' => 'first_name',
+        '2' => 'last_name',
+        '3' => 'email_address',
+        '4' => 'phone_number',
+        '5' => 'company_name',
+        '6' => 'inquiry_type',
+        '7' => 'message',
+        // Add more fields as needed
+        'id' => 'entry_id',
+        'form_id' => 'form_id', 
+        'date_created' => 'date_created',
+        'ip' => 'ip_address',
+        'source_url' => 'source_url'
+    );
+}
+
+/**
+ * Get field mappings for Form 3
+ */
+function get_form_3_field_mappings() {
+    // Basic field mappings for Form 3
+    // Can be customized based on your form structure
+    return array(
+        '1' => 'applicant_name',
+        '2' => 'applicant_email',
+        '3' => 'applicant_phone',
+        '4' => 'service_requested',
+        '5' => 'preferred_date',
+        '6' => 'additional_info',
+        // Add more fields as needed
+        'id' => 'entry_id',
+        'form_id' => 'form_id',
+        'date_created' => 'date_created', 
+        'ip' => 'ip_address',
+        'source_url' => 'source_url'
+    );
+}
+
+/**
  * Transform Gravity Forms webhook data to use field names instead of IDs
  */
 function transform_gravity_forms_webhook($data, $form_id = null) {
@@ -332,6 +412,15 @@ function transform_gravity_forms_webhook($data, $form_id = null) {
     
     // Select appropriate mappings based on form ID
     switch ($form_id) {
+        case 1:
+            $field_mappings = get_form_1_field_mappings();
+            break;
+        case 2:
+            $field_mappings = get_form_2_field_mappings();
+            break;
+        case 3:
+            $field_mappings = get_form_3_field_mappings();
+            break;
         case 11:
             $field_mappings = get_alarm_monitoring_form_field_mappings();
             break;
@@ -448,5 +537,68 @@ add_action('gform_after_submission_12', function($entry, $form) {
     // Log the response if needed
     if (is_wp_error($response)) {
         error_log('Webhook Error (Form 12): ' . $response->get_error_message());
+    }
+}, 10, 2);
+
+// Form 1: General Form
+add_action('gform_after_submission_1', function($entry, $form) {
+    // Transform the entry data with form ID
+    $transformed_data = transform_gravity_forms_webhook($entry, 1);
+    
+    // Send to your webhook endpoint
+    $webhook_url = 'YOUR_MOMENTUM_WEBHOOK_URL_HERE';
+    
+    $response = wp_remote_post($webhook_url, array(
+        'method' => 'POST',
+        'headers' => array('Content-Type' => 'application/json'),
+        'body' => json_encode($transformed_data),
+        'timeout' => 30
+    ));
+    
+    // Log the response if needed
+    if (is_wp_error($response)) {
+        error_log('Webhook Error (Form 1): ' . $response->get_error_message());
+    }
+}, 10, 2);
+
+// Form 2: General Form
+add_action('gform_after_submission_2', function($entry, $form) {
+    // Transform the entry data with form ID
+    $transformed_data = transform_gravity_forms_webhook($entry, 2);
+    
+    // Send to your webhook endpoint
+    $webhook_url = 'YOUR_MOMENTUM_WEBHOOK_URL_HERE';
+    
+    $response = wp_remote_post($webhook_url, array(
+        'method' => 'POST',
+        'headers' => array('Content-Type' => 'application/json'),
+        'body' => json_encode($transformed_data),
+        'timeout' => 30
+    ));
+    
+    // Log the response if needed
+    if (is_wp_error($response)) {
+        error_log('Webhook Error (Form 2): ' . $response->get_error_message());
+    }
+}, 10, 2);
+
+// Form 3: General Form
+add_action('gform_after_submission_3', function($entry, $form) {
+    // Transform the entry data with form ID
+    $transformed_data = transform_gravity_forms_webhook($entry, 3);
+    
+    // Send to your webhook endpoint
+    $webhook_url = 'YOUR_MOMENTUM_WEBHOOK_URL_HERE';
+    
+    $response = wp_remote_post($webhook_url, array(
+        'method' => 'POST',
+        'headers' => array('Content-Type' => 'application/json'),
+        'body' => json_encode($transformed_data),
+        'timeout' => 30
+    ));
+    
+    // Log the response if needed
+    if (is_wp_error($response)) {
+        error_log('Webhook Error (Form 3): ' . $response->get_error_message());
     }
 }, 10, 2);

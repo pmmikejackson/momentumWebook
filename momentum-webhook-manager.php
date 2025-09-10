@@ -2,14 +2,31 @@
 /**
  * Plugin Name: Momentum Webhook Manager
  * Description: Manages automatic sending and manual resending of Gravity Forms entries to Momentum webhook
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Momentum Integration
  * 
  * This plugin provides:
- * - Automatic webhook sending for forms 10, 11, 12
+ * - Automatic webhook sending for forms 1, 2, 3, 10, 11, 12
  * - Admin interface to view and resend entries
- * - Webhook status tracking
+ * - WordPress admin dashboard widget with statistics
+ * - Admin bar quick access menu with notifications
+ * - Webhook status tracking and timezone support
  * - Bulk resend capabilities
+ * - Field mapping support for all supported forms
+ * 
+ * Release Notes:
+ * 
+ * Version 1.1.0 (Current)
+ * - Added support for Forms 1, 2, and 3
+ * - Added WordPress admin dashboard widget with real-time statistics
+ * - Added admin bar menu with notification badges for pending/failed entries
+ * - Added field mappings for Forms 1, 2, and 3
+ * - Enhanced UI with form breakdown and quick access links
+ * - Improved statistics tracking across all supported forms
+ * 
+ * Version 1.0.0
+ * - Initial release with support for Forms 10, 11, 12
+ * - Basic webhook management and resend functionality
  */
 
 // Prevent direct access
@@ -18,7 +35,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define constants
-define('MWM_VERSION', '1.0.0');
+define('MWM_VERSION', '1.1.0');
 define('MWM_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('MWM_PLUGIN_PATH', plugin_dir_path(__FILE__));
 
@@ -41,6 +58,72 @@ function mwm_activate() {
     add_option('mwm_retry_failed', 'yes');
     add_option('mwm_log_webhooks', 'yes');
     add_option('mwm_max_retries', 3);
+}
+
+/**
+ * Add Quick Actions to Admin Bar
+ */
+add_action('admin_bar_menu', 'mwm_add_admin_bar_menu', 100);
+function mwm_add_admin_bar_menu($wp_admin_bar) {
+    if (!current_user_can('manage_options')) {
+        return;
+    }
+    
+    $stats = mwm_get_webhook_statistics();
+    $total_pending = 0;
+    $total_failed = 0;
+    
+    foreach ($stats as $stat) {
+        $total_pending += $stat['not_sent'];
+        $total_failed += $stat['failed'];
+    }
+    
+    $notification_count = $total_pending + $total_failed;
+    $title = 'Webhook Manager';
+    
+    if ($notification_count > 0) {
+        $title .= ' <span class="awaiting-mod count-' . $notification_count . '"><span class="pending-count">' . $notification_count . '</span></span>';
+    }
+    
+    // Main menu
+    $wp_admin_bar->add_menu(array(
+        'id' => 'mwm-webhook-manager',
+        'title' => $title,
+        'href' => admin_url('admin.php?page=mwm-webhook-manager')
+    ));
+    
+    // Submenu items
+    $wp_admin_bar->add_menu(array(
+        'parent' => 'mwm-webhook-manager',
+        'id' => 'mwm-manage-entries',
+        'title' => 'Manage Entries',
+        'href' => admin_url('admin.php?page=mwm-webhook-manager')
+    ));
+    
+    if ($total_pending > 0) {
+        $wp_admin_bar->add_menu(array(
+            'parent' => 'mwm-webhook-manager',
+            'id' => 'mwm-pending-entries',
+            'title' => 'Pending Entries (' . $total_pending . ')',
+            'href' => admin_url('admin.php?page=mwm-webhook-manager&status=not_sent')
+        ));
+    }
+    
+    if ($total_failed > 0) {
+        $wp_admin_bar->add_menu(array(
+            'parent' => 'mwm-webhook-manager',
+            'id' => 'mwm-failed-entries',
+            'title' => 'Failed Entries (' . $total_failed . ')',
+            'href' => admin_url('admin.php?page=mwm-webhook-manager&status=failed')
+        ));
+    }
+    
+    $wp_admin_bar->add_menu(array(
+        'parent' => 'mwm-webhook-manager',
+        'id' => 'mwm-settings',
+        'title' => 'Settings',
+        'href' => admin_url('admin.php?page=mwm-settings')
+    ));
 }
 
 /**
@@ -130,7 +213,7 @@ function mwm_admin_page() {
         ?>
         
         <div class="notice notice-info">
-            <p><strong>Supported Forms:</strong> Security Guard (ID: 10), Alarm Monitoring (ID: 11), Private Investigator (ID: 12)</p>
+            <p><strong>Supported Forms:</strong> Form 1, Form 2, Form 3, Security Guard (ID: 10), Alarm Monitoring (ID: 11), Private Investigator (ID: 12)</p>
         </div>
         
         <?php
@@ -146,6 +229,9 @@ function mwm_admin_page() {
             
             <select name="form_id" onchange="this.form.submit()">
                 <option value="0">All Forms</option>
+                <option value="1" <?php selected($selected_form, 1); ?>>Form 1</option>
+                <option value="2" <?php selected($selected_form, 2); ?>>Form 2</option>
+                <option value="3" <?php selected($selected_form, 3); ?>>Form 3</option>
                 <option value="10" <?php selected($selected_form, 10); ?>>Security Guard (10)</option>
                 <option value="11" <?php selected($selected_form, 11); ?>>Alarm Monitoring (11)</option>
                 <option value="12" <?php selected($selected_form, 12); ?>>Private Investigator (12)</option>
@@ -168,7 +254,7 @@ function mwm_admin_page() {
         // Collect entries from supported forms
         $all_entries = array();
         $total_count = 0;
-        $form_ids = $selected_form > 0 ? array($selected_form) : array(10, 11, 12);
+        $form_ids = $selected_form > 0 ? array($selected_form) : array(1, 2, 3, 10, 11, 12);
         
         foreach ($form_ids as $form_id) {
             if (!GFAPI::form_id_exists($form_id)) {
@@ -624,7 +710,7 @@ function mwm_handle_form_submission($entry, $form) {
     }
     
     // Only process supported forms
-    if (!in_array($form['id'], array(10, 11, 12))) {
+    if (!in_array($form['id'], array(1, 2, 3, 10, 11, 12))) {
         return;
     }
     
@@ -647,7 +733,7 @@ function mwm_retry_webhook_handler($entry_id, $form_id) {
 add_action('gform_after_update_entry', 'mwm_handle_entry_update', 10, 2);
 function mwm_handle_entry_update($form, $entry_id) {
     // Only process supported forms
-    if (!in_array($form['id'], array(10, 11, 12))) {
+    if (!in_array($form['id'], array(1, 2, 3, 10, 11, 12))) {
         return;
     }
     
@@ -717,8 +803,11 @@ function mwm_test_webhook() {
  */
 function mwm_get_webhook_statistics() {
     $stats = array();
-    $form_ids = array(10, 11, 12);
+    $form_ids = array(1, 2, 3, 10, 11, 12);
     $form_names = array(
+        1 => 'Form 1',
+        2 => 'Form 2', 
+        3 => 'Form 3',
         10 => 'Security Guard',
         11 => 'Alarm Monitoring',
         12 => 'Private Investigator'
@@ -778,7 +867,7 @@ function mwm_log($message) {
  */
 add_filter('gform_entry_list_columns', 'mwm_add_status_column', 10, 2);
 function mwm_add_status_column($columns, $form_id) {
-    if (in_array($form_id, array(10, 11, 12))) {
+    if (in_array($form_id, array(1, 2, 3, 10, 11, 12))) {
         $columns['webhook_status'] = 'Webhook';
     }
     return $columns;
@@ -789,7 +878,7 @@ function mwm_add_status_column($columns, $form_id) {
  */
 add_filter('gform_entries_column_filter', 'mwm_status_column_content', 10, 5);
 function mwm_status_column_content($value, $form_id, $field_id, $entry, $query_string) {
-    if ($field_id === 'webhook_status' && in_array($form_id, array(10, 11, 12))) {
+    if ($field_id === 'webhook_status' && in_array($form_id, array(1, 2, 3, 10, 11, 12))) {
         $status = gform_get_meta($entry['id'], 'mwm_webhook_status');
         $last_sent = gform_get_meta($entry['id'], 'mwm_webhook_sent');
         
@@ -815,7 +904,7 @@ function mwm_status_column_content($value, $form_id, $field_id, $entry, $query_s
  */
 add_filter('gform_entries_first_column_actions', 'mwm_add_resend_action', 10, 4);
 function mwm_add_resend_action($actions, $form_id, $field_id, $entry) {
-    if (in_array($form_id, array(10, 11, 12))) {
+    if (in_array($form_id, array(1, 2, 3, 10, 11, 12))) {
         $resend_url = wp_nonce_url(
             admin_url('admin.php?page=mwm-webhook-manager&action=quick_resend&entry=' . $entry['id'] . '&form=' . $form_id),
             'mwm_quick_resend'
@@ -865,4 +954,184 @@ function mwm_display_quick_resend_notices() {
     if (isset($_GET['webhook_failed'])) {
         echo '<div class="notice notice-error is-dismissible"><p>Webhook send failed. Check the Momentum Webhook Manager for details.</p></div>';
     }
+}
+
+/**
+ * Add WordPress Admin Dashboard Widget
+ */
+add_action('wp_dashboard_setup', 'mwm_add_dashboard_widget');
+function mwm_add_dashboard_widget() {
+    wp_add_dashboard_widget(
+        'mwm_webhook_dashboard',
+        'Momentum Webhook Manager',
+        'mwm_dashboard_widget_content',
+        'mwm_dashboard_widget_control'
+    );
+}
+
+/**
+ * Dashboard widget content
+ */
+function mwm_dashboard_widget_content() {
+    $webhook_url = get_option('mwm_webhook_url', '');
+    $stats = mwm_get_webhook_statistics();
+    
+    // Calculate totals
+    $total_entries = 0;
+    $total_sent = 0;
+    $total_failed = 0;
+    $total_not_sent = 0;
+    
+    foreach ($stats as $stat) {
+        $total_entries += $stat['total'];
+        $total_sent += $stat['sent'];
+        $total_failed += $stat['failed'];
+        $total_not_sent += $stat['not_sent'];
+    }
+    
+    ?>
+    <div class="mwm-dashboard-widget">
+        <?php if (empty($webhook_url)): ?>
+            <div class="notice notice-warning inline" style="margin: 0 0 15px 0; padding: 10px;">
+                <p><strong>⚠️ Webhook URL not configured</strong><br>
+                <a href="<?php echo admin_url('admin.php?page=mwm-settings'); ?>">Configure Settings</a></p>
+            </div>
+        <?php endif; ?>
+        
+        <div class="mwm-stats" style="display: flex; gap: 15px; margin-bottom: 20px;">
+            <div class="stat-box" style="flex: 1; text-align: center; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                <div style="font-size: 24px; font-weight: bold; color: #0073aa;"><?php echo $total_entries; ?></div>
+                <div style="font-size: 12px; color: #666;">Total Entries</div>
+            </div>
+            <div class="stat-box" style="flex: 1; text-align: center; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                <div style="font-size: 24px; font-weight: bold; color: #00a32a;"><?php echo $total_sent; ?></div>
+                <div style="font-size: 12px; color: #666;">Sent</div>
+            </div>
+            <div class="stat-box" style="flex: 1; text-align: center; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                <div style="font-size: 24px; font-weight: bold; color: #d63638;"><?php echo $total_failed; ?></div>
+                <div style="font-size: 12px; color: #666;">Failed</div>
+            </div>
+            <div class="stat-box" style="flex: 1; text-align: center; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                <div style="font-size: 24px; font-weight: bold; color: #f56e28;"><?php echo $total_not_sent; ?></div>
+                <div style="font-size: 12px; color: #666;">Not Sent</div>
+            </div>
+        </div>
+        
+        <?php if ($total_not_sent > 0 || $total_failed > 0): ?>
+            <div class="mwm-alerts" style="margin-bottom: 15px;">
+                <?php if ($total_not_sent > 0): ?>
+                    <div class="notice notice-warning inline" style="margin: 5px 0; padding: 8px;">
+                        <p style="margin: 0;"><strong><?php echo $total_not_sent; ?> entries</strong> have not been sent to webhook</p>
+                    </div>
+                <?php endif; ?>
+                <?php if ($total_failed > 0): ?>
+                    <div class="notice notice-error inline" style="margin: 5px 0; padding: 8px;">
+                        <p style="margin: 0;"><strong><?php echo $total_failed; ?> entries</strong> failed to send</p>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+        
+        <div class="mwm-actions" style="text-align: center;">
+            <a href="<?php echo admin_url('admin.php?page=mwm-webhook-manager'); ?>" class="button button-primary">Manage Webhooks</a>
+            <a href="<?php echo admin_url('admin.php?page=mwm-settings'); ?>" class="button">Settings</a>
+            
+            <?php if ($total_not_sent > 0): ?>
+                <a href="<?php echo admin_url('admin.php?page=mwm-webhook-manager&status=not_sent'); ?>" 
+                   class="button button-secondary" style="margin-top: 5px;">Send Pending (<?php echo $total_not_sent; ?>)</a>
+            <?php endif; ?>
+            
+            <?php if ($total_failed > 0): ?>
+                <a href="<?php echo admin_url('admin.php?page=mwm-webhook-manager&status=failed'); ?>" 
+                   class="button button-secondary" style="margin-top: 5px;">Retry Failed (<?php echo $total_failed; ?>)</a>
+            <?php endif; ?>
+        </div>
+        
+        <?php if (!empty($stats)): ?>
+            <details style="margin-top: 15px;">
+                <summary style="cursor: pointer; font-weight: bold;">Form Breakdown</summary>
+                <table class="widefat" style="margin-top: 10px;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 5px;">Form</th>
+                            <th style="padding: 5px; text-align: center;">Total</th>
+                            <th style="padding: 5px; text-align: center;">Sent</th>
+                            <th style="padding: 5px; text-align: center;">Failed</th>
+                            <th style="padding: 5px; text-align: center;">Pending</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($stats as $form_id => $stat): ?>
+                            <?php if ($stat['total'] > 0): ?>
+                                <tr>
+                                    <td style="padding: 5px;"><a href="<?php echo admin_url('admin.php?page=mwm-webhook-manager&form_id=' . $form_id); ?>"><?php echo esc_html($stat['form_name']); ?></a></td>
+                                    <td style="padding: 5px; text-align: center;"><?php echo $stat['total']; ?></td>
+                                    <td style="padding: 5px; text-align: center; color: #00a32a;"><?php echo $stat['sent']; ?></td>
+                                    <td style="padding: 5px; text-align: center; color: #d63638;"><?php echo $stat['failed']; ?></td>
+                                    <td style="padding: 5px; text-align: center; color: #f56e28;"><?php echo $stat['not_sent']; ?></td>
+                                </tr>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </details>
+        <?php endif; ?>
+    </div>
+    
+    <style>
+    .mwm-dashboard-widget .notice {
+        border-left: 4px solid;
+    }
+    .mwm-dashboard-widget .stat-box {
+        transition: transform 0.2s;
+    }
+    .mwm-dashboard-widget .stat-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .mwm-dashboard-widget details summary {
+        padding: 8px;
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .mwm-dashboard-widget details[open] summary {
+        border-bottom: none;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+    .mwm-dashboard-widget details table {
+        border-top: none;
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+    }
+    </style>
+    <?php
+}
+
+/**
+ * Dashboard widget control (configuration)
+ */
+function mwm_dashboard_widget_control() {
+    // Handle settings update
+    if (isset($_POST['mwm_widget_submit'])) {
+        update_option('mwm_widget_show_stats', isset($_POST['show_stats']) ? 'yes' : 'no');
+        update_option('mwm_widget_show_alerts', isset($_POST['show_alerts']) ? 'yes' : 'no');
+    }
+    
+    $show_stats = get_option('mwm_widget_show_stats', 'yes');
+    $show_alerts = get_option('mwm_widget_show_alerts', 'yes');
+    ?>
+    <p>
+        <label>
+            <input type="checkbox" name="show_stats" value="yes" <?php checked($show_stats, 'yes'); ?> />
+            Show statistics
+        </label><br>
+        <label>
+            <input type="checkbox" name="show_alerts" value="yes" <?php checked($show_alerts, 'yes'); ?> />
+            Show alerts for pending/failed entries
+        </label>
+    </p>
+    <input type="hidden" name="mwm_widget_submit" value="1" />
+    <?php
 }
