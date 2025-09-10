@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Momentum Webhook Manager
  * Description: Manages automatic sending and manual resending of Gravity Forms entries to Momentum webhook
- * Version: 1.2.6
+ * Version: 1.2.7
  * Author: Momentum Integration
  *
  * @package MomentumWebhookManager
@@ -977,7 +977,7 @@ function mwm_send_entry_to_webhook( $entry_id, $form_id, $manual = false ) {
 	);
 
 	// Update attempt metadata with current timestamp
-	gform_update_meta( $entry_id, 'mwm_last_attempt', current_time( 'timestamp' ) );
+	gform_update_meta( $entry_id, 'mwm_last_attempt', time() );
 	$attempt_count = gform_get_meta( $entry_id, 'mwm_attempt_count' ) ?: 0;
 	gform_update_meta( $entry_id, 'mwm_attempt_count', $attempt_count + 1 );
 
@@ -1002,7 +1002,7 @@ function mwm_send_entry_to_webhook( $entry_id, $form_id, $manual = false ) {
 	if ( $response_code >= 200 && $response_code < 300 ) {
 		// Success
 		gform_update_meta( $entry_id, 'mwm_webhook_status', 'sent' );
-		gform_update_meta( $entry_id, 'mwm_webhook_sent', current_time( 'timestamp' ) );
+		gform_update_meta( $entry_id, 'mwm_webhook_sent', time() );
 		gform_update_meta( $entry_id, 'mwm_response_code', $response_code );
 		// Clear statistics cache
 		delete_transient( 'mwm_webhook_statistics' );
