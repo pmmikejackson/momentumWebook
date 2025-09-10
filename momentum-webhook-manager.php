@@ -6,7 +6,7 @@
  * Author: Momentum Integration
  * 
  * This plugin provides:
- * - Automatic webhook sending for forms 1, 2, 3, 10, 11, 12
+ * - Automatic webhook sending for Old Alarm Monitoring (1), Old Private Investigator (2), Old Security Guard (3), Security Guard (10), Alarm Monitoring (11), Private Investigator (12)
  * - Admin interface to view and resend entries
  * - WordPress admin dashboard widget with statistics
  * - Admin bar quick access menu with notifications
@@ -17,12 +17,12 @@
  * Release Notes:
  * 
  * Version 1.1.0 (Current)
- * - Added support for Forms 1, 2, and 3
+ * - Added support for legacy forms: Old Alarm Monitoring (1), Old Private Investigator (2), Old Security Guard (3)
  * - Added WordPress admin dashboard widget with real-time statistics
  * - Added admin bar menu with notification badges for pending/failed entries
- * - Added field mappings for Forms 1, 2, and 3
+ * - Added field mappings for all legacy forms
  * - Enhanced UI with form breakdown and quick access links
- * - Improved statistics tracking across all supported forms
+ * - Improved statistics tracking across all 6 supported forms
  * 
  * Version 1.0.0
  * - Initial release with support for Forms 10, 11, 12
@@ -213,7 +213,7 @@ function mwm_admin_page() {
         ?>
         
         <div class="notice notice-info">
-            <p><strong>Supported Forms:</strong> Form 1, Form 2, Form 3, Security Guard (ID: 10), Alarm Monitoring (ID: 11), Private Investigator (ID: 12)</p>
+            <p><strong>Supported Forms:</strong> Old Alarm Monitoring (ID: 1), Old Private Investigator (ID: 2), Old Security Guard (ID: 3), Security Guard (ID: 10), Alarm Monitoring (ID: 11), Private Investigator (ID: 12)</p>
         </div>
         
         <?php
@@ -229,9 +229,9 @@ function mwm_admin_page() {
             
             <select name="form_id" onchange="this.form.submit()">
                 <option value="0">All Forms</option>
-                <option value="1" <?php selected($selected_form, 1); ?>>Form 1</option>
-                <option value="2" <?php selected($selected_form, 2); ?>>Form 2</option>
-                <option value="3" <?php selected($selected_form, 3); ?>>Form 3</option>
+                <option value="1" <?php selected($selected_form, 1); ?>>Old Alarm Monitoring (1)</option>
+                <option value="2" <?php selected($selected_form, 2); ?>>Old Private Investigator (2)</option>
+                <option value="3" <?php selected($selected_form, 3); ?>>Old Security Guard (3)</option>
                 <option value="10" <?php selected($selected_form, 10); ?>>Security Guard (10)</option>
                 <option value="11" <?php selected($selected_form, 11); ?>>Alarm Monitoring (11)</option>
                 <option value="12" <?php selected($selected_form, 12); ?>>Private Investigator (12)</option>
@@ -805,9 +805,9 @@ function mwm_get_webhook_statistics() {
     $stats = array();
     $form_ids = array(1, 2, 3, 10, 11, 12);
     $form_names = array(
-        1 => 'Form 1',
-        2 => 'Form 2', 
-        3 => 'Form 3',
+        1 => 'Old Alarm Monitoring',
+        2 => 'Old Private Investigator', 
+        3 => 'Old Security Guard',
         10 => 'Security Guard',
         11 => 'Alarm Monitoring',
         12 => 'Private Investigator'

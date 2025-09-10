@@ -4,15 +4,16 @@
  * Version: 1.1.0
  * 
  * This file maps Gravity Forms field IDs to proper field names
- * for all supported forms (Form IDs 1, 2, 3, 10, 11, 12)
+ * for all supported forms: Old Alarm Monitoring (1), Old Private Investigator (2), 
+ * Old Security Guard (3), Security Guard (10), Alarm Monitoring (11), Private Investigator (12)
  * 
  * Release Notes:
  * 
  * Version 1.1.0 (Current)
- * - Added support for Forms 1, 2, and 3 with custom field mappings
- * - Added automatic webhook hooks for Forms 1, 2, 3
- * - Expanded form support beyond just security applications
- * - Added basic field mappings for general form types
+ * - Added support for legacy forms: Old Alarm Monitoring (1), Old Private Investigator (2), Old Security Guard (3)
+ * - Added automatic webhook hooks for all legacy forms
+ * - Expanded form support to include legacy/archived application forms
+ * - Added field mappings for all legacy form types with proper naming
  * 
  * Version 1.0.9
  * - Initial field mapping implementation for Forms 10, 11, 12
@@ -334,10 +335,10 @@ function get_private_investigator_form_field_mappings() {
 }
 
 /**
- * Get field mappings for Form 1
+ * Get field mappings for Old Alarm Monitoring Application (Form 1)
  */
 function get_form_1_field_mappings() {
-    // Basic field mappings for Form 1
+    // Field mappings for Old Alarm Monitoring Application
     // Can be customized based on your form structure
     return array(
         '1' => 'company_name',
@@ -357,10 +358,10 @@ function get_form_1_field_mappings() {
 }
 
 /**
- * Get field mappings for Form 2  
+ * Get field mappings for Old Private Investigator Application (Form 2)  
  */
 function get_form_2_field_mappings() {
-    // Basic field mappings for Form 2
+    // Field mappings for Old Private Investigator Application
     // Can be customized based on your form structure
     return array(
         '1' => 'first_name',
@@ -380,10 +381,10 @@ function get_form_2_field_mappings() {
 }
 
 /**
- * Get field mappings for Form 3
+ * Get field mappings for Old Security Guard Application (Form 3)
  */
 function get_form_3_field_mappings() {
-    // Basic field mappings for Form 3
+    // Field mappings for Old Security Guard Application
     // Can be customized based on your form structure
     return array(
         '1' => 'applicant_name',
@@ -540,7 +541,7 @@ add_action('gform_after_submission_12', function($entry, $form) {
     }
 }, 10, 2);
 
-// Form 1: General Form
+// Form 1: Old Alarm Monitoring Application
 add_action('gform_after_submission_1', function($entry, $form) {
     // Transform the entry data with form ID
     $transformed_data = transform_gravity_forms_webhook($entry, 1);
@@ -557,11 +558,11 @@ add_action('gform_after_submission_1', function($entry, $form) {
     
     // Log the response if needed
     if (is_wp_error($response)) {
-        error_log('Webhook Error (Form 1): ' . $response->get_error_message());
+        error_log('Webhook Error (Old Alarm Monitoring): ' . $response->get_error_message());
     }
 }, 10, 2);
 
-// Form 2: General Form
+// Form 2: Old Private Investigator Application
 add_action('gform_after_submission_2', function($entry, $form) {
     // Transform the entry data with form ID
     $transformed_data = transform_gravity_forms_webhook($entry, 2);
@@ -578,11 +579,11 @@ add_action('gform_after_submission_2', function($entry, $form) {
     
     // Log the response if needed
     if (is_wp_error($response)) {
-        error_log('Webhook Error (Form 2): ' . $response->get_error_message());
+        error_log('Webhook Error (Old Private Investigator): ' . $response->get_error_message());
     }
 }, 10, 2);
 
-// Form 3: General Form
+// Form 3: Old Security Guard Application
 add_action('gform_after_submission_3', function($entry, $form) {
     // Transform the entry data with form ID
     $transformed_data = transform_gravity_forms_webhook($entry, 3);
@@ -599,6 +600,6 @@ add_action('gform_after_submission_3', function($entry, $form) {
     
     // Log the response if needed
     if (is_wp_error($response)) {
-        error_log('Webhook Error (Form 3): ' . $response->get_error_message());
+        error_log('Webhook Error (Old Security Guard): ' . $response->get_error_message());
     }
 }, 10, 2);
