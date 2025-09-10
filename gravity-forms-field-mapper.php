@@ -1,7 +1,7 @@
 <?php
 /**
  * Gravity Forms Field Mapper for Momentum Webhook
- * Version: 1.2.0
+ * Version: 1.2.1
  *
  * @package MomentumWebhookManager
  *
@@ -11,7 +11,16 @@
  *
  * Release Notes:
  *
- * Version 1.2.0 (Current)
+ * Version 1.2.1 (Current)
+ * - Enhanced field mappings with comprehensive coverage (200+ fields)
+ * - Fixed duplicate field ID mappings (fields 65, 66, 95, 96)
+ * - Updated field names for consistency (alternate_name, limit_of_liability)
+ * - Fixed typo in lawsuit_claims_details field
+ * - Excluded problematic fields from webhook (date_updated, status, country)
+ * - Added descriptive names for explanation fields (191-199)
+ * - Changed field 217 from years_of_experience to business_start_date
+ *
+ * Version 1.2.0
  * - Mapper direct send hooks are disabled by default and gated behind an option/filter
  * - Direct send now uses saved plugin webhook URL when enabled
  * - Housekeeping: adjusted duplicate keys and minor label corrections
@@ -208,16 +217,7 @@ function get_security_guard_form_field_mappings() {
 
 		// section 4 - Description of Operations
 
-		// Additional Fields
-		'191'                => 'airport_work_details',
-		'192'                => 'apartment_work_details',
-		'193'                => 'retail_work_details',
-		'194'                => 'criminal_work_details',
-		'195'                => 'special_events_work_details',
-		'196'                => 'bodyguard_work_details',
-		'197'                => 'athlete_celeb',
-		'198'                => 'security_consulting_work_details',
-		'199'                => 'other_work_details',
+		// Fields 191-199 defined in explanation section below
 
 		// section 5 - Curent Insurance Information
 
@@ -226,13 +226,13 @@ function get_security_guard_form_field_mappings() {
 		'154'                => 'expiration_date',
 		'153'                => 'premium_amount',
 		'155'                => 'deductible_amount',
-		'156'                => 'Limit of Liability',
+		'156'                => 'limit_of_liability',
 		'157'                => 'occurence_form',
 		'158'                => 'declined_coverage',
 		'159'                => 'declined_coverage_details',
 		'160'                => 'req_incidents',
 		'161'                => 'lawsuit_claims',
-		'162'                => 'lawsuite_claims_details',
+		'162'                => 'lawsuit_claims_details',
 		'164'                => 'future_claims',
 		'165'                => 'future_claims_details',
 		'187'                => 'loss_run_details',
@@ -258,15 +258,15 @@ function get_security_guard_form_field_mappings() {
 		'175.6'              => 'pre_screen_part_6',
 
 		'190'                => 'signature_image',
-		'301'                => 'field_301',
-		'302'                => 'field_302',
-		'303'                => 'field_303',
-		'304'                => 'field_304',
-		'305'                => 'field_305',
-		'306'                => 'field_306',
-		'307'                => 'field_307',
-		'308'                => 'field_308',
-		'309'                => 'field_309',
+		'191'                => 'airport_work_explanation',
+		'192'                => 'apartment_work_explanation',
+		'193'                => 'retail_work_explanation',
+		'194'                => 'criminal_detention_center_explanation',
+		'195'                => 'special_events_explanation',
+		'196'                => 'bodyguard_work_explanation',
+		'197'                => 'athlete_celebrity',
+		'198'                => 'security_consulting_explanation',
+		'199'                => 'other_explanation',
 		'200'                => 'AgencyID',
 		'201'                => 'form_name',
 
@@ -277,7 +277,7 @@ function get_security_guard_form_field_mappings() {
 		'203.6'              => 'applicant_last_name',
 		'203.8'              => 'applicant_suffix',
 
-		'208'                => 'applicant_name',
+		'208'                => 'alternate_name',
 		'208.2'              => 'alternate_prefix',
 		'208.3'              => 'alternate_first_name',
 		'208.4'              => 'alternate_middle_name',
@@ -292,7 +292,7 @@ function get_security_guard_form_field_mappings() {
 		'213'                => 'field_213',
 		'214'                => 'field_214',
 		'215'                => 'field_215',
-		'216'                => 'years_of_experience',
+		'217'                => 'business_start_date',
 
 		// System fields
 		'id'                 => 'entry_id',
@@ -440,7 +440,7 @@ function transform_gravity_forms_webhook( $data, $form_id = null ) {
 	}
 
 	// Fields to exclude from the webhook payload
-	$excluded_fields = array( 'id', 'form_id', 'is_starred', 'is_read', 'ip', 'user_agent', 'currency', 'source_id', '202' );
+	$excluded_fields = array( 'id', 'form_id', 'date_updated', 'is_starred', 'is_read', 'ip', 'user_agent', 'currency', 'source_id', 'status', '2.6', '3.6', '202' );
 
 	$transformed = array();
 
