@@ -1,7 +1,7 @@
 <?php
 /**
  * Gravity Forms Field Mapper for Momentum Webhook
- * Version: 1.1.0
+ * Version: 1.2.0
  * 
  * This file maps Gravity Forms field IDs to proper field names
  * for all supported forms: Old Alarm Monitoring (1), Old Private Investigator (2), 
@@ -9,7 +9,12 @@
  * 
  * Release Notes:
  * 
- * Version 1.1.0 (Current)
+ * Version 1.2.0 (Current)
+ * - Mapper direct send hooks are disabled by default and gated behind an option/filter
+ * - Direct send now uses saved plugin webhook URL when enabled
+ * - Housekeeping: adjusted duplicate keys and minor label corrections
+ * 
+ * Version 1.1.0
  * - Added support for legacy forms: Old Alarm Monitoring (1), Old Private Investigator (2), Old Security Guard (3)
  * - Added automatic webhook hooks for all legacy forms
  * - Expanded form support to include legacy/archived application forms
@@ -119,7 +124,7 @@ function get_security_guard_form_field_mappings() {
         '63' => 'ua_construction',
         '64' => 'ua_convention',
         '65' => 'ua_crim_detention',
-        '65' => 'ua_executive_protection',
+        '66' => 'ua_executive_protection',
         '67' => 'ua_fast_food',
         '68' => 'ua_federal_government',
         '69' => 'ua_retirement_homes',
@@ -461,145 +466,50 @@ function transform_gravity_forms_webhook($data, $form_id = null) {
 }
 
 /**
- * Hook into Gravity Forms webhook to transform the data
+ * Optional: mapper-level direct sending and webhook data transform
+ * Disabled by default to ensure the plugin is the single source of truth.
+ * Enable via: add_filter('mwm_enable_mapper_direct_send', '__return_true');
  */
-add_filter('gform_webhooks_request_data', function($request_data, $feed, $entry, $form) {
-    // Get form ID from the form array
-    $form_id = isset($form['id']) ? intval($form['id']) : null;
-    
-    // Transform the entry data with form ID
-    $transformed_data = transform_gravity_forms_webhook($entry, $form_id);
-    
-    // Return the transformed data
-    return $transformed_data;
-}, 10, 4);
+$mwm_enable_mapper_direct_send = apply_filters(
+    'mwm_enable_mapper_direct_send',
+    get_option('mwm_enable_mapper_direct_send', 'no') === 'yes'
+);
 
-/**
- * Alternative: Create custom actions for each form that sends properly formatted data
- */
+if ($mwm_enable_mapper_direct_send) {
+    /**
+     * Hook into Gravity Forms Webhooks Add-On data to transform payload
+     */
+    add_filter('gform_webhooks_request_data', function($request_data, $feed, $entry, $form) {
+        $form_id = isset($form['id']) ? intval($form['id']) : null;
+        return transform_gravity_forms_webhook($entry, $form_id);
+    }, 10, 4);
 
-// Form 10: Security Guard Application
-add_action('gform_after_submission_10', function($entry, $form) {
-    // Transform the entry data with form ID
-    $transformed_data = transform_gravity_forms_webhook($entry, 10);
-    
-    // Send to your webhook endpoint
-    $webhook_url = 'YOUR_MOMENTUM_WEBHOOK_URL_HERE';
-    
-    $response = wp_remote_post($webhook_url, array(
-        'method' => 'POST',
-        'headers' => array('Content-Type' => 'application/json'),
-        'body' => json_encode($transformed_data),
-        'timeout' => 30
-    ));
-    
-    // Log the response if needed
-    if (is_wp_error($response)) {
-        error_log('Webhook Error (Form 10): ' . $response->get_error_message());
-    }
-}, 10, 2);
+    /**
+     * Direct send helpers for per-form submission hooks
+     */
+    $mwm_mapper_direct_send = function($entry, $target_form_id) {
+        $webhook_url = get_option('mwm_webhook_url', '');
+        if (empty($webhook_url)) {
+            error_log('MWM Mapper: Webhook URL not configured');
+            return;
+        }
+        $transformed = transform_gravity_forms_webhook($entry, $target_form_id);
+        $response = wp_remote_post($webhook_url, array(
+            'method'  => 'POST',
+            'headers' => array('Content-Type' => 'application/json'),
+            'body'    => wp_json_encode($transformed),
+            'timeout' => 30,
+        ));
+        if (is_wp_error($response)) {
+            error_log('MWM Mapper Webhook Error (Form ' . $target_form_id . '): ' . $response->get_error_message());
+        }
+    };
 
-// Form 11: Alarm Monitoring Application
-add_action('gform_after_submission_11', function($entry, $form) {
-    // Transform the entry data with form ID
-    $transformed_data = transform_gravity_forms_webhook($entry, 11);
-    
-    // Send to your webhook endpoint
-    $webhook_url = 'YOUR_MOMENTUM_WEBHOOK_URL_HERE';
-    
-    $response = wp_remote_post($webhook_url, array(
-        'method' => 'POST',
-        'headers' => array('Content-Type' => 'application/json'),
-        'body' => json_encode($transformed_data),
-        'timeout' => 30
-    ));
-    
-    // Log the response if needed
-    if (is_wp_error($response)) {
-        error_log('Webhook Error (Form 11): ' . $response->get_error_message());
-    }
-}, 10, 2);
-
-// Form 12: Private Investigator Application
-add_action('gform_after_submission_12', function($entry, $form) {
-    // Transform the entry data with form ID
-    $transformed_data = transform_gravity_forms_webhook($entry, 12);
-    
-    // Send to your webhook endpoint
-    $webhook_url = 'YOUR_MOMENTUM_WEBHOOK_URL_HERE';
-    
-    $response = wp_remote_post($webhook_url, array(
-        'method' => 'POST',
-        'headers' => array('Content-Type' => 'application/json'),
-        'body' => json_encode($transformed_data),
-        'timeout' => 30
-    ));
-    
-    // Log the response if needed
-    if (is_wp_error($response)) {
-        error_log('Webhook Error (Form 12): ' . $response->get_error_message());
-    }
-}, 10, 2);
-
-// Form 1: Old Alarm Monitoring Application
-add_action('gform_after_submission_1', function($entry, $form) {
-    // Transform the entry data with form ID
-    $transformed_data = transform_gravity_forms_webhook($entry, 1);
-    
-    // Send to your webhook endpoint
-    $webhook_url = 'YOUR_MOMENTUM_WEBHOOK_URL_HERE';
-    
-    $response = wp_remote_post($webhook_url, array(
-        'method' => 'POST',
-        'headers' => array('Content-Type' => 'application/json'),
-        'body' => json_encode($transformed_data),
-        'timeout' => 30
-    ));
-    
-    // Log the response if needed
-    if (is_wp_error($response)) {
-        error_log('Webhook Error (Old Alarm Monitoring): ' . $response->get_error_message());
-    }
-}, 10, 2);
-
-// Form 2: Old Private Investigator Application
-add_action('gform_after_submission_2', function($entry, $form) {
-    // Transform the entry data with form ID
-    $transformed_data = transform_gravity_forms_webhook($entry, 2);
-    
-    // Send to your webhook endpoint
-    $webhook_url = 'YOUR_MOMENTUM_WEBHOOK_URL_HERE';
-    
-    $response = wp_remote_post($webhook_url, array(
-        'method' => 'POST',
-        'headers' => array('Content-Type' => 'application/json'),
-        'body' => json_encode($transformed_data),
-        'timeout' => 30
-    ));
-    
-    // Log the response if needed
-    if (is_wp_error($response)) {
-        error_log('Webhook Error (Old Private Investigator): ' . $response->get_error_message());
-    }
-}, 10, 2);
-
-// Form 3: Old Security Guard Application
-add_action('gform_after_submission_3', function($entry, $form) {
-    // Transform the entry data with form ID
-    $transformed_data = transform_gravity_forms_webhook($entry, 3);
-    
-    // Send to your webhook endpoint
-    $webhook_url = 'YOUR_MOMENTUM_WEBHOOK_URL_HERE';
-    
-    $response = wp_remote_post($webhook_url, array(
-        'method' => 'POST',
-        'headers' => array('Content-Type' => 'application/json'),
-        'body' => json_encode($transformed_data),
-        'timeout' => 30
-    ));
-    
-    // Log the response if needed
-    if (is_wp_error($response)) {
-        error_log('Webhook Error (Old Security Guard): ' . $response->get_error_message());
-    }
-}, 10, 2);
+    // Form-specific direct send actions (use with caution)
+    add_action('gform_after_submission_10', function($entry, $form) use ($mwm_mapper_direct_send) { $mwm_mapper_direct_send($entry, 10); }, 10, 2);
+    add_action('gform_after_submission_11', function($entry, $form) use ($mwm_mapper_direct_send) { $mwm_mapper_direct_send($entry, 11); }, 10, 2);
+    add_action('gform_after_submission_12', function($entry, $form) use ($mwm_mapper_direct_send) { $mwm_mapper_direct_send($entry, 12); }, 10, 2);
+    add_action('gform_after_submission_1',  function($entry, $form) use ($mwm_mapper_direct_send) { $mwm_mapper_direct_send($entry, 1);  }, 10, 2);
+    add_action('gform_after_submission_2',  function($entry, $form) use ($mwm_mapper_direct_send) { $mwm_mapper_direct_send($entry, 2);  }, 10, 2);
+    add_action('gform_after_submission_3',  function($entry, $form) use ($mwm_mapper_direct_send) { $mwm_mapper_direct_send($entry, 3);  }, 10, 2);
+}

@@ -193,11 +193,25 @@ If you encounter issues:
 3. Test with a simple payload first
 4. Ensure all required WordPress functions are available
 
+## Momentum Webhook Manager Integration
+
+If you are using the Momentum Webhook Manager plugin included in this repo (`momentum-webhook-manager.php`), the plugin is the source of truth for sending webhooks. The field mapper (`gravity-forms-field-mapper.php`) provides data transformations that the plugin uses.
+
+- Plugin sending: Enabled by default via `mwm_handle_form_submission` and manual/bulk resend tools in WP Admin.
+- Mapper direct send (legacy/testing): Disabled by default. You can enable it in WP Admin under Momentum Webhooks → Settings by checking “Mapper Direct Send (Legacy)”. When enabled, the mapper will also post directly to the configured webhook on submission, which may duplicate sends. Use only for testing.
+- Programmatic toggle: `add_filter('mwm_enable_mapper_direct_send', '__return_true');`
+
+Recommended: Leave the legacy toggle off in production so the plugin exclusively controls webhook delivery, retries, logging, and status tracking.
+
 ## Requirements
 
 - WordPress 5.0 or higher
 - PHP 7.4 or higher
 - Access to modify functions.php or create plugins
+
+## Changelog
+
+See `CHANGELOG.md` for version history and release notes.
 
 ## License
 

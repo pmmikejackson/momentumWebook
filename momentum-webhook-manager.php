@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Momentum Webhook Manager
  * Description: Manages automatic sending and manual resending of Gravity Forms entries to Momentum webhook
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Momentum Integration
  * 
  * This plugin provides:
@@ -16,7 +16,14 @@
  * 
  * Release Notes:
  * 
- * Version 1.1.0 (Current)
+ * Version 1.2.0 (Current)
+ * - Added Settings toggle to enable/disable legacy mapper direct send (disabled by default)
+ * - Made plugin the source of truth for sending; mapper direct hooks are gated
+ * - Fixed undefined filter variables in bulk resend actions
+ * - Improved sanitization for webhook URL and bulk action inputs
+ * - Logging streamlined to respect plugin option
+ * 
+ * Version 1.1.0
  * - Added support for legacy forms: Old Alarm Monitoring (1), Old Private Investigator (2), Old Security Guard (3)
  * - Added WordPress admin dashboard widget with real-time statistics
  * - Added admin bar menu with notification badges for pending/failed entries
@@ -35,7 +42,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define constants
-define('MWM_VERSION', '1.1.0');
+define('MWM_VERSION', '1.2.0');
 define('MWM_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('MWM_PLUGIN_PATH', plugin_dir_path(__FILE__));
 
@@ -58,6 +65,7 @@ function mwm_activate() {
     add_option('mwm_retry_failed', 'yes');
     add_option('mwm_log_webhooks', 'yes');
     add_option('mwm_max_retries', 3);
+    add_option('mwm_enable_mapper_direct_send', 'no');
 }
 
 /**
@@ -164,6 +172,23 @@ function mwm_add_admin_menu() {
  * Main admin page - Entry management
  */
 function mwm_admin_page() {
+    // Read current filters early so they are available to POST handlers
+    $selected_form = isset($_REQUEST['form_id']) ? intval($_REQUEST['form_id']) : 0;
+    $selected_status = isset($_REQUEST['status']) ? sanitize_text_field($_REQUEST['status']) : 'all';
+    $selected_read = isset($_REQUEST['read_state']) ? sanitize_text_field($_REQUEST['read_state']) : 'all';
+
+    // Handle toggle read/unread
+    if (isset($_POST['toggle_read']) && wp_verify_nonce($_POST['mwm_nonce'], 'mwm_toggle_read')) {
+        $entry_id = intval($_POST['entry_id']);
+        $new_read = isset($_POST['new_read']) && $_POST['new_read'] === '1' ? true : false;
+        $updated = GFAPI::update_entry_property($entry_id, 'is_read', $new_read);
+        if (!is_wp_error($updated)) {
+            echo '<div class="notice notice-success"><p>Entry #' . esc_html($entry_id) . ' marked as ' . ($new_read ? 'read' : 'unread') . '.</p></div>';
+        } else {
+            echo '<div class="notice notice-error"><p>Failed to update read state for entry #' . esc_html($entry_id) . '.</p></div>';
+        }
+    }
+
     // Handle single resend
     if (isset($_POST['resend_entry']) && wp_verify_nonce($_POST['mwm_nonce'], 'mwm_resend')) {
         $entry_id = intval($_POST['entry_id']);
@@ -179,7 +204,7 @@ function mwm_admin_page() {
     
     // Handle bulk resend
     if (isset($_POST['bulk_action']) && wp_verify_nonce($_POST['mwm_nonce'], 'mwm_bulk')) {
-        $bulk_action = $_POST['bulk_action'];
+        $bulk_action = sanitize_text_field($_POST['bulk_action']);
         
         if ($bulk_action === 'resend') {
             if (!empty($_POST['entries'])) {
@@ -201,6 +226,26 @@ function mwm_admin_page() {
                 echo '<div class="notice notice-info"><p>' . esc_html($message) . '</p></div>';
             } else {
                 echo '<div class="notice notice-warning"><p>No entries selected for bulk action.</p></div>';
+            }
+        } elseif ($bulk_action === 'mark_read' || $bulk_action === 'mark_unread') {
+            if (!empty($_POST['entries'])) {
+                $set_read = ($bulk_action === 'mark_read');
+                $success_count = 0;
+                $fail_count = 0;
+                foreach ($_POST['entries'] as $entry_data) {
+                    list($entry_id) = explode(':', $entry_data);
+                    $updated = GFAPI::update_entry_property(intval($entry_id), 'is_read', $set_read);
+                    if (!is_wp_error($updated)) {
+                        $success_count++;
+                    } else {
+                        $fail_count++;
+                    }
+                }
+                $msg = $set_read ? 'read' : 'unread';
+                $message = sprintf('Marked %d entries as %s. %d failed.', $success_count, $msg, $fail_count);
+                echo '<div class="notice notice-info"><p>' . esc_html($message) . '</p></div>';
+            } else {
+                echo '<div class="notice notice-warning"><p>No entries selected.</p></div>';
             }
         } elseif (in_array($bulk_action, array('resend_all', 'resend_all_not_sent', 'resend_all_failed'))) {
             // Handle resend all variations
@@ -244,9 +289,10 @@ function mwm_admin_page() {
         </div>
         
         <?php
-        // Filters
-        $selected_form = isset($_GET['form_id']) ? intval($_GET['form_id']) : 0;
-        $selected_status = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : 'all';
+        // Filters (already initialized above; keep in sync from GET for UI)
+        $selected_form = isset($_GET['form_id']) ? intval($_GET['form_id']) : $selected_form;
+        $selected_status = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : $selected_status;
+        $selected_read = isset($_GET['read_state']) ? sanitize_text_field($_GET['read_state']) : $selected_read;
         $page_num = isset($_GET['pagenum']) ? intval($_GET['pagenum']) : 1;
         $per_page = isset($_GET['per_page']) ? intval($_GET['per_page']) : 25;
         
@@ -284,6 +330,18 @@ function mwm_admin_page() {
                 </div>
                 
                 <div>
+                    <label for="read_state" style="font-weight: bold;">Read:</label>
+                    <select name="read_state" id="read_state" onchange="this.form.submit()">
+                        <option value="all" <?php selected($selected_read, 'all'); ?>>All</option>
+                        <option value="read" <?php selected($selected_read, 'read'); ?>>Read</option>
+                        <option value="unread" <?php selected($selected_read, 'unread'); ?>>Unread</option>
+                    </select>
+                </div>
+                <div>
+                    <a href="<?php echo esc_url( admin_url('admin.php?page=mwm-webhook-manager') ); ?>" class="button">Clear Filters</a>
+                </div>
+                
+                <div>
                     <label for="per_page" style="font-weight: bold;">Show:</label>
                     <select name="per_page" id="per_page" onchange="this.form.submit()">
                         <option value="25" <?php selected($per_page, 25); ?>>25 per page</option>
@@ -312,7 +370,12 @@ function mwm_admin_page() {
                 continue;
             }
             
-            $entries = GFAPI::get_entries($form_id, $search_criteria, $sorting);
+            // Force GFAPI to return ALL entries by setting unlimited page size
+        $unlimited_paging = array('offset' => 0, 'page_size' => 999999);
+        $entries = GFAPI::get_entries($form_id, $search_criteria, $sorting, $unlimited_paging);
+        
+        // Debug: Log entry counts per form (respects logging option)
+        mwm_log('Form ' . $form_id . ' returned ' . count($entries) . ' entries for bulk processing');
             
             // Filter by webhook status if needed
             if ($selected_status !== 'all') {
@@ -325,6 +388,20 @@ function mwm_admin_page() {
                     } elseif ($selected_status === 'not_sent' && empty($webhook_status)) {
                         $filtered_entries[] = $entry;
                     } elseif ($selected_status === 'failed' && $webhook_status === 'failed') {
+                        $filtered_entries[] = $entry;
+                    }
+                }
+                $entries = $filtered_entries;
+            }
+            
+            // Filter by read/unread if needed
+            if ($selected_read !== 'all') {
+                $filtered_entries = array();
+                foreach ($entries as $entry) {
+                    $is_read = !empty($entry['is_read']);
+                    if ($selected_read === 'read' && $is_read) {
+                        $filtered_entries[] = $entry;
+                    } elseif ($selected_read === 'unread' && !$is_read) {
                         $filtered_entries[] = $entry;
                     }
                 }
@@ -348,6 +425,7 @@ function mwm_admin_page() {
         $filter_params = array(
             'form_id' => $selected_form,
             'status' => $selected_status,
+            'read_state' => $selected_read,
             'per_page' => $per_page
         );
         ?>
@@ -360,6 +438,8 @@ function mwm_admin_page() {
                     <select name="bulk_action" id="bulk-action-selector">
                         <option value="">Bulk Actions</option>
                         <option value="resend">Resend Selected</option>
+                        <option value="mark_read">Mark Selected as Read</option>
+                        <option value="mark_unread">Mark Selected as Unread</option>
                         <option value="resend_all">Resend All <?php echo $total_count; ?> Entries</option>
                         <?php if ($selected_status === 'not_sent'): ?>
                             <option value="resend_all_not_sent">Resend All Not Sent (<?php echo $total_count; ?>)</option>
@@ -408,12 +488,24 @@ function mwm_admin_page() {
                 </div>
             </div>
             
-            <table class="wp-list-table widefat fixed striped">
+            <div class="mwm-legend" role="note" aria-label="Legend">
+                <span class="legend-item"><span style="color: green;" aria-hidden="true">✓</span> Sent</span>
+                <span class="legend-item"><span style="color: red;" aria-hidden="true">✗</span> Failed</span>
+                <span class="legend-item"><span style="color: orange;" aria-hidden="true">⊙</span> Not Sent</span>
+                <span class="legend-item"><span class="mwm-read-dot" aria-hidden="true">●</span> Read</span>
+                <span class="legend-item"><span class="mwm-unread-dot" aria-hidden="true">●</span> Unread</span>
+                <span class="legend-item"><strong>Bold row</strong> = Not Sent</span>
+            </div>
+
+            <table class="wp-list-table widefat fixed striped" aria-describedby="mwm-table-caption">
+                <caption id="mwm-table-caption" class="screen-reader-text">Momentum Webhook entries list</caption>
                 <thead>
                     <tr>
                         <th class="check-column">
                             <input type="checkbox" id="select-all" />
                             <br><small style="font-weight: normal;">Page (<?php echo count($entries); ?>)</small>
+                            <br><a href="#" id="mwm-mark-page-read" class="mwm-quick-link">Mark page read</a>
+                            <br><a href="#" id="mwm-mark-page-unread" class="mwm-quick-link">Mark page unread</a>
                         </th>
                         <th>ID</th>
                         <th>Form</th>
@@ -421,6 +513,7 @@ function mwm_admin_page() {
                         <th>Email</th>
                         <th>Created</th>
                         <th>Webhook Status</th>
+                        <th>Read</th>
                         <th>Last Attempt</th>
                         <th>Actions</th>
                     </tr>
@@ -428,7 +521,7 @@ function mwm_admin_page() {
                 <tbody>
                     <?php if (empty($entries)): ?>
                         <tr>
-                            <td colspan="9">No entries found.</td>
+                            <td colspan="10">No entries found.</td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($entries as $entry): ?>
@@ -439,8 +532,10 @@ function mwm_admin_page() {
                             $webhook_status = gform_get_meta($entry['id'], 'mwm_webhook_status');
                             $last_attempt = gform_get_meta($entry['id'], 'mwm_last_attempt');
                             $attempt_count = gform_get_meta($entry['id'], 'mwm_attempt_count') ?: 0;
+                            $is_read = isset($entry['is_read']) ? (int) $entry['is_read'] : 0;
+                            $is_not_sent = empty($webhook_status);
                             ?>
-                            <tr>
+                            <tr class="<?php echo $is_not_sent ? 'mwm-not-sent' : ''; ?>">
                                 <th scope="row" class="check-column">
                                     <input type="checkbox" name="entries[]" value="<?php echo esc_attr($entry['id'] . ':' . $entry['form_id']); ?>" />
                                 </th>
@@ -464,6 +559,13 @@ function mwm_admin_page() {
                                     ?>
                                 </td>
                                 <td>
+                                    <?php if ($is_read): ?>
+                                        <span class="mwm-read-dot" title="Read" aria-label="Read" role="img">●</span>
+                                    <?php else: ?>
+                                        <span class="mwm-unread-dot" title="Unread" aria-label="Unread" role="img">●</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
                                     <?php
                                     if ($last_attempt) {
                                         // Convert timestamp to WordPress timezone
@@ -482,6 +584,14 @@ function mwm_admin_page() {
                                         <input type="hidden" name="form_id" value="<?php echo esc_attr($entry['form_id']); ?>" />
                                         <button type="submit" name="resend_entry" class="button button-small">Resend</button>
                                     </form>
+                                    <form method="post" style="display: inline; margin-left: 4px;">
+                                        <?php wp_nonce_field('mwm_toggle_read', 'mwm_nonce'); ?>
+                                        <input type="hidden" name="entry_id" value="<?php echo esc_attr($entry['id']); ?>" />
+                                        <input type="hidden" name="new_read" value="<?php echo $is_read ? '0' : '1'; ?>" />
+                                        <button type="submit" name="toggle_read" class="button button-small">
+                                            <?php echo $is_read ? 'Mark Unread' : 'Mark Read'; ?>
+                                        </button>
+                                    </form>
                                     <a href="<?php echo admin_url('admin.php?page=gf_entries&view=entry&id=' . $entry['form_id'] . '&lid=' . $entry['id']); ?>" 
                                        class="button button-small" target="_blank">View</a>
                                 </td>
@@ -490,6 +600,24 @@ function mwm_admin_page() {
                     <?php endif; ?>
                 </tbody>
             </table>
+            <div class="tablenav bottom">
+                <div class="alignleft actions bulkactions">
+                    <select name="bulk_action" id="bulk-action-selector-bottom">
+                        <option value="">Bulk Actions</option>
+                        <option value="resend">Resend Selected</option>
+                        <option value="mark_read">Mark Selected as Read</option>
+                        <option value="mark_unread">Mark Selected as Unread</option>
+                        <option value="resend_all">Resend All <?php echo $total_count; ?> Entries</option>
+                        <?php if ($selected_status === 'not_sent'): ?>
+                            <option value="resend_all_not_sent">Resend All Not Sent (<?php echo $total_count; ?>)</option>
+                        <?php endif; ?>
+                        <?php if ($selected_status === 'failed'): ?>
+                            <option value="resend_all_failed">Resend All Failed (<?php echo $total_count; ?>)</option>
+                        <?php endif; ?>
+                    </select>
+                    <input type="submit" name="apply_bulk" class="button action" value="Apply">
+                </div>
+            </div>
         </form>
     </div>
     
@@ -502,7 +630,9 @@ function mwm_admin_page() {
         
         // Ensure form submission works properly
         $('input[name="apply_bulk"]').on('click', function(e) {
-            var action = $('#bulk-action-selector').val();
+            var actionTop = $('#bulk-action-selector').val();
+            var actionBottom = $('#bulk-action-selector-bottom').val();
+            var action = actionBottom || actionTop;
             if (action === '') {
                 e.preventDefault();
                 alert('Please select a bulk action.');
@@ -516,18 +646,52 @@ function mwm_admin_page() {
                     e.preventDefault();
                     return false;
                 }
-            } else if (action === 'resend') {
-                // For regular resend, check if entries are selected
+            } else if (action === 'resend' || action === 'mark_read' || action === 'mark_unread') {
+                // For actions that require selected entries
                 var checked = $('input[name="entries[]"]:checked').length;
                 if (checked === 0) {
                     e.preventDefault();
                     alert('Please select at least one entry.');
                     return false;
                 }
+                if (action === 'resend') {
+                    if (!confirm('Resend ' + checked + ' selected entr' + (checked === 1 ? 'y' : 'ies') + ' to webhook?')) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
             }
+        });
+
+        // Quick links: mark entire page read/unread
+        function mwmSubmitPageMark(setTo) {
+            // Select all on page
+            $('input[name="entries[]"]').prop('checked', true);
+            // Set bulk action
+            $('#bulk-action-selector, #bulk-action-selector-bottom').val(setTo);
+            // Submit the form via the Apply button to reuse handlers
+            $('input[name="apply_bulk"]').trigger('click');
+        }
+        $('#mwm-mark-page-read').on('click', function(e) {
+            e.preventDefault();
+            mwmSubmitPageMark('mark_read');
+        });
+        $('#mwm-mark-page-unread').on('click', function(e) {
+            e.preventDefault();
+            mwmSubmitPageMark('mark_unread');
         });
     });
     </script>
+    <style>
+    /* Bold rows that have not been sent to the webhook */
+    tr.mwm-not-sent td { font-weight: 600; }
+    .mwm-quick-link { font-size: 11px; text-decoration: none; }
+    .mwm-quick-link:hover { text-decoration: underline; }
+    .mwm-read-dot { color: #00a32a; font-size: 16px; line-height: 1; }
+    .mwm-unread-dot { color: #d63638; font-size: 16px; line-height: 1; }
+    .mwm-legend { margin: 8px 0 6px; color: #555; font-size: 12px; }
+    .mwm-legend .legend-item { display: inline-flex; align-items: center; gap: 4px; margin-right: 12px; }
+    </style>
     <?php
 }
 
@@ -537,11 +701,12 @@ function mwm_admin_page() {
 function mwm_settings_page() {
     // Save settings
     if (isset($_POST['save_settings']) && wp_verify_nonce($_POST['mwm_settings_nonce'], 'mwm_save_settings')) {
-        update_option('mwm_webhook_url', sanitize_url($_POST['webhook_url']));
+        update_option('mwm_webhook_url', esc_url_raw($_POST['webhook_url']));
         update_option('mwm_auto_send', isset($_POST['auto_send']) ? 'yes' : 'no');
         update_option('mwm_retry_failed', isset($_POST['retry_failed']) ? 'yes' : 'no');
         update_option('mwm_log_webhooks', isset($_POST['log_webhooks']) ? 'yes' : 'no');
         update_option('mwm_max_retries', intval($_POST['max_retries']));
+        update_option('mwm_enable_mapper_direct_send', isset($_POST['mapper_direct_send']) ? 'yes' : 'no');
         
         echo '<div class="notice notice-success"><p>Settings saved successfully!</p></div>';
     }
@@ -561,6 +726,7 @@ function mwm_settings_page() {
     $retry_failed = get_option('mwm_retry_failed', 'yes');
     $log_webhooks = get_option('mwm_log_webhooks', 'yes');
     $max_retries = get_option('mwm_max_retries', 3);
+    $mapper_direct_send = get_option('mwm_enable_mapper_direct_send', 'no');
     ?>
     
     <div class="wrap">
@@ -603,6 +769,18 @@ function mwm_settings_page() {
                                    <?php checked($retry_failed, 'yes'); ?> />
                             Automatically retry failed webhook sends
                         </label>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row">Mapper Direct Send (Legacy)</th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="mapper_direct_send" value="yes" 
+                                   <?php checked($mapper_direct_send, 'yes'); ?> />
+                            Enable direct send from field-mapper hooks (may duplicate sends). Use only for testing.
+                        </label>
+                        <p class="description">If enabled, the mapper file will post directly to the configured webhook on form submission in addition to the plugin logic.</p>
                     </td>
                 </tr>
                 
@@ -899,7 +1077,12 @@ function mwm_get_all_entries_for_bulk_action($selected_form, $selected_status, $
             continue;
         }
         
-        $entries = GFAPI::get_entries($form_id, $search_criteria, $sorting);
+        // Force GFAPI to return ALL entries by setting unlimited page size
+        $unlimited_paging = array('offset' => 0, 'page_size' => 999999);
+        $entries = GFAPI::get_entries($form_id, $search_criteria, $sorting, $unlimited_paging);
+        
+        // Debug: Log entry counts per form
+        error_log('MWM Debug: Form ' . $form_id . ' returned ' . count($entries) . ' entries');
         
         // Filter entries based on bulk action type
         $filtered_entries = array();
