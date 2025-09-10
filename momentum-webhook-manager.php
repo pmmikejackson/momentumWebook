@@ -113,6 +113,8 @@ function mwm_admin_page() {
             
             $message = sprintf('Bulk resend completed: %d successful, %d failed', $success_count, $fail_count);
             echo '<div class="notice notice-info"><p>' . esc_html($message) . '</p></div>';
+        } else {
+            echo '<div class="notice notice-warning"><p>No entries selected for bulk action.</p></div>';
         }
     }
     
@@ -206,16 +208,16 @@ function mwm_admin_page() {
         $entries = array_slice($all_entries, ($page_num - 1) * $per_page, $per_page);
         ?>
         
-        <form method="post" action="">
+        <form method="post" action="<?php echo admin_url('admin.php?page=mwm-webhook-manager'); ?>">
             <?php wp_nonce_field('mwm_bulk', 'mwm_nonce'); ?>
             
             <div class="tablenav top">
                 <div class="alignleft actions bulkactions">
-                    <select name="bulk_action">
+                    <select name="bulk_action" id="bulk-action-selector">
                         <option value="">Bulk Actions</option>
                         <option value="resend">Resend Selected</option>
                     </select>
-                    <input type="submit" class="button action" value="Apply">
+                    <input type="submit" name="apply_bulk" class="button action" value="Apply">
                 </div>
                 
                 <div class="tablenav-pages">
@@ -302,7 +304,10 @@ function mwm_admin_page() {
                                 <td>
                                     <?php
                                     if ($last_attempt) {
-                                        echo date('m/d/Y H:i', $last_attempt);
+                                        // Convert timestamp to WordPress timezone
+                                        $date = new DateTime('@' . $last_attempt);
+                                        $date->setTimezone(wp_timezone());
+                                        echo $date->format('m/d/Y g:i A');
                                     } else {
                                         echo '-';
                                     }
@@ -328,8 +333,26 @@ function mwm_admin_page() {
     
     <script>
     jQuery(document).ready(function($) {
+        // Handle select all checkbox
         $('#select-all').on('change', function() {
             $('input[name="entries[]"]').prop('checked', this.checked);
+        });
+        
+        // Ensure form submission works properly
+        $('input[name="apply_bulk"]').on('click', function(e) {
+            var action = $('#bulk-action-selector').val();
+            if (action === '') {
+                e.preventDefault();
+                alert('Please select a bulk action.');
+                return false;
+            }
+            
+            var checked = $('input[name="entries[]"]:checked').length;
+            if (checked === 0) {
+                e.preventDefault();
+                alert('Please select at least one entry.');
+                return false;
+            }
         });
     });
     </script>
@@ -533,8 +556,8 @@ function mwm_send_entry_to_webhook($entry_id, $form_id, $manual = false) {
         'timeout' => 30,
     ));
     
-    // Update attempt metadata
-    gform_update_meta($entry_id, 'mwm_last_attempt', time());
+    // Update attempt metadata with current timestamp
+    gform_update_meta($entry_id, 'mwm_last_attempt', current_time('timestamp'));
     $attempt_count = gform_get_meta($entry_id, 'mwm_attempt_count') ?: 0;
     gform_update_meta($entry_id, 'mwm_attempt_count', $attempt_count + 1);
     
@@ -557,7 +580,7 @@ function mwm_send_entry_to_webhook($entry_id, $form_id, $manual = false) {
     if ($response_code >= 200 && $response_code < 300) {
         // Success
         gform_update_meta($entry_id, 'mwm_webhook_status', 'sent');
-        gform_update_meta($entry_id, 'mwm_webhook_sent', time());
+        gform_update_meta($entry_id, 'mwm_webhook_sent', current_time('timestamp'));
         gform_update_meta($entry_id, 'mwm_response_code', $response_code);
         
         mwm_log('Webhook successful for entry #' . $entry_id . ' (Response: ' . $response_code . ')');
@@ -773,7 +796,9 @@ function mwm_status_column_content($value, $form_id, $field_id, $entry, $query_s
         if ($status === 'sent') {
             $value = '<span style="color: green;">✓</span>';
             if ($last_sent) {
-                $value .= '<br><small>' . date('m/d', $last_sent) . '</small>';
+                $date = new DateTime('@' . $last_sent);
+                $date->setTimezone(wp_timezone());
+                $value .= '<br><small>' . $date->format('m/d') . '</small>';
             }
         } elseif ($status === 'failed') {
             $value = '<span style="color: red;">✗</span>';
