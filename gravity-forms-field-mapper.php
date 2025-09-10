@@ -1,10 +1,25 @@
 <?php
 /**
  * Gravity Forms Field Mapper for Momentum Webhook
- * Version: 1.0.9
+ * Version: 1.0.10
  * 
  * This file maps Gravity Forms field IDs to proper field names
  * for the Security Guard Application forms (Form IDs 10, 11, 12)
+ * 
+ * Release Notes:
+ * 
+ * Version 1.0.10 (Current)
+ * - Added full application field mapping for all form sections
+ * - Fixed duplicate field ID mappings (fields 65, 66, 95, 96)
+ * - Updated field names for consistency (alternate_name, limit_of_liability)
+ * - Fixed typo in lawsuit_claims_details field
+ * - Excluded date_updated, status, and country fields from webhook
+ * - Added descriptive names for explanation fields (191-199)
+ * - Changed field 217 from years_of_experience to business_start_date
+ * 
+ * Version 1.0.9
+ * - Initial field mapping implementation
+ * - Support for Forms 10, 11, 12
  */
 
 // Prevent direct access
@@ -106,7 +121,7 @@ function get_security_guard_form_field_mappings() {
         '63' => 'ua_construction',
         '64' => 'ua_convention',
         '65' => 'ua_crim_detention',
-        '65' => 'ua_executive_protection',
+        '66' => 'ua_executive_protection',
         '67' => 'ua_fast_food',
         '68' => 'ua_federal_government',
         '69' => 'ua_retirement_homes',
@@ -145,7 +160,7 @@ function get_security_guard_form_field_mappings() {
         '93' => 'a_armored_car',
         '94' => 'a_banks',
         '95' => 'a_bounty_hunter',
-        '95' => 'a_car_dealers',
+        '96' => 'a_car_dealers',
         '97' => 'a_churches',
         '98' => 'a_construction',
         '99' => 'a_convention',
@@ -207,13 +222,13 @@ function get_security_guard_form_field_mappings() {
         '154' => 'expiration_date',
         '153' => 'premium_amount',
         '155' => 'deductible_amount',
-        '156' => 'Limit of Liability',
+        '156' => 'limit_of_liability',
         '157' => 'occurence_form',
         '158' => 'declined_coverage',
         '159' => 'declined_coverage_details',
         '160' => 'req_incidents',
         '161' => 'lawsuit_claims',
-        '162' => 'lawsuite_claims_details',
+        '162' => 'lawsuit_claims_details',
         '164' => 'future_claims',
         '165' => 'future_claims_details',
         '187' => 'loss_run_details',
@@ -240,26 +255,26 @@ function get_security_guard_form_field_mappings() {
         
         
         '190' => 'signature_image',
-        '191' => 'field_191',
-        '192' => 'field_192',
-        '193' => 'field_193',
-        '194' => 'field_194',
-        '195' => 'field_195',
-        '196' => 'field_196',
-        '197' => 'field_197',
-        '198' => 'field_198',
-        '199' => 'field_199',
+        '191' => 'airport_work_explanation',
+        '192' => 'apartment_work_explanation',
+        '193' => 'retail_work_explanation',
+        '194' => 'criminal_detention_center_explanation',
+        '195' => 'special_events_explanation',
+        '196' => 'bodyguard_work_explanation',
+        '197' => 'athlete_celebrity',
+        '198' => 'security_consulting_explanation',
+        '199' => 'other_explanation',
         '200' => 'AgencyID',
         '201' => 'form_name',
         
         // Name fields
-
+        '203' => 'applicant_name',
         '203.3' => 'applicant_first_name',
         '203.4' => 'applicant_middle_name',
         '203.6' => 'applicant_last_name',
         '203.8' => 'applicant_suffix',
         
-        '208' => 'applicant_name',
+        '208' => 'alternate_name',
         '208.2' => 'alternate_prefix',
         '208.3' => 'alternate_first_name',
         '208.4' => 'alternate_middle_name',
@@ -274,7 +289,7 @@ function get_security_guard_form_field_mappings() {
         '213' => 'field_213',
         '214' => 'field_214',
         '215' => 'field_215',
-        '216' => 'years_of_experience',
+        '217' => 'business_start_date',
         
         // System fields
         'id' => 'entry_id',
@@ -296,7 +311,7 @@ function get_security_guard_form_field_mappings() {
         'transaction_type' => 'transaction_type',
         'status' => 'entry_status',
         'unique_id' => 'AgencyID',
-        'form_title' => 'Form Name',
+        'form_title' => 'form_name',
         
         // PDF field
         'gpdf_65981c1a21d80' => 'generated_pdf_url'
@@ -345,7 +360,7 @@ function transform_gravity_forms_webhook($data, $form_id = null) {
     }
     
     // Fields to exclude from the webhook payload
-    $excluded_fields = array('id', 'form_id', 'is_starred', 'is_read', 'ip', 'user_agent', 'currency', 'source_id', '202');
+    $excluded_fields = array('id', 'form_id', 'date_updated', 'is_starred', 'is_read', 'ip', 'user_agent', 'currency', 'source_id', 'status', '2.6', '3.6', '202');
     
     $transformed = array();
     
