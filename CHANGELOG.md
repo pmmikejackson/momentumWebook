@@ -6,6 +6,12 @@ The project contains two primary components:
 - Momentum Webhook Manager plugin (`momentum-webhook-manager.php`)
 - Gravity Forms Field Mapper (`gravity-forms-field-mapper.php`)
 
+## [1.2.1] - 2025-09-10
+
+### Fixed
+- Prevent fatal errors when Gravity Forms is inactive by guarding calls to `GFAPI` and related functions.
+- Admin Bar badge, Dashboard widget, and Entries screen safely degrade when GF isn’t available.
+
 ## [1.2.0] - 2025-09-10
 
 ### Added

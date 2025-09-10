@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Momentum Webhook Manager
  * Description: Manages automatic sending and manual resending of Gravity Forms entries to Momentum webhook
- * Version: 1.2.0
+ * Version: 1.2.1
  * Author: Momentum Integration
  * 
  * This plugin provides:
@@ -16,7 +16,11 @@
  * 
  * Release Notes:
  * 
- * Version 1.2.0 (Current)
+ * Version 1.2.1 (Current)
+ * - Prevent fatal errors when Gravity Forms is inactive by guarding GFAPI calls
+ * - Admin Bar, Dashboard Widget, and Entries screen now check for GF availability
+ * 
+ * Version 1.2.0
  * - Added Settings toggle to enable/disable legacy mapper direct send (disabled by default)
  * - Made plugin the source of truth for sending; mapper direct hooks are gated
  * - Fixed undefined filter variables in bulk resend actions
@@ -42,7 +46,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define constants
-define('MWM_VERSION', '1.2.0');
+define('MWM_VERSION', '1.2.1');
 define('MWM_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('MWM_PLUGIN_PATH', plugin_dir_path(__FILE__));
 
@@ -77,16 +81,17 @@ function mwm_add_admin_bar_menu($wp_admin_bar) {
         return;
     }
     
-    $stats = mwm_get_webhook_statistics();
-    $total_pending = 0;
-    $total_failed = 0;
-    
-    foreach ($stats as $stat) {
-        $total_pending += $stat['not_sent'];
-        $total_failed += $stat['failed'];
+    $notification_count = 0;
+    if (class_exists('GFAPI')) {
+        $stats = mwm_get_webhook_statistics();
+        $total_pending = 0;
+        $total_failed = 0;
+        foreach ($stats as $stat) {
+            $total_pending += $stat['not_sent'];
+            $total_failed += $stat['failed'];
+        }
+        $notification_count = $total_pending + $total_failed;
     }
-    
-    $notification_count = $total_pending + $total_failed;
     $title = 'Webhook Manager';
     
     if ($notification_count > 0) {
@@ -172,6 +177,11 @@ function mwm_add_admin_menu() {
  * Main admin page - Entry management
  */
 function mwm_admin_page() {
+    // Require Gravity Forms for this screen
+    if (!class_exists('GFAPI')) {
+        echo '<div class="wrap"><h1>Momentum Webhook Manager</h1><div class="notice notice-error"><p>Gravity Forms is required for this page. Please activate Gravity Forms.</p></div></div>';
+        return;
+    }
     // Read current filters early so they are available to POST handlers
     $selected_form = isset($_REQUEST['form_id']) ? intval($_REQUEST['form_id']) : 0;
     $selected_status = isset($_REQUEST['status']) ? sanitize_text_field($_REQUEST['status']) : 'all';
@@ -1066,6 +1076,9 @@ function mwm_test_webhook() {
  * Get all entries for bulk actions (handles large datasets)
  */
 function mwm_get_all_entries_for_bulk_action($selected_form, $selected_status, $bulk_action) {
+    if (!class_exists('GFAPI')) {
+        return array();
+    }
     $search_criteria = array('status' => 'active');
     $sorting = array('key' => 'date_created', 'direction' => 'DESC');
     
@@ -1133,6 +1146,9 @@ function mwm_get_all_entries_for_bulk_action($selected_form, $selected_status, $
  * Get webhook statistics
  */
 function mwm_get_webhook_statistics() {
+    if (!class_exists('GFAPI')) {
+        return array();
+    }
     $stats = array();
     $form_ids = array(1, 2, 3, 10, 11, 12);
     $form_names = array(
@@ -1305,7 +1321,10 @@ function mwm_add_dashboard_widget() {
  */
 function mwm_dashboard_widget_content() {
     $webhook_url = get_option('mwm_webhook_url', '');
-    $stats = mwm_get_webhook_statistics();
+    $stats = class_exists('GFAPI') ? mwm_get_webhook_statistics() : array();
+    if (!class_exists('GFAPI')) {
+        echo '<div class="notice notice-error inline" style="margin: 0 0 15px 0; padding: 10px;"><p><strong>Gravity Forms is not active</strong><br>This widget requires Gravity Forms to display entry stats.</p></div>';
+    }
     
     // Calculate totals
     $total_entries = 0;
