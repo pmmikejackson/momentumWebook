@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Momentum Webhook Manager
  * Description: Manages automatic sending and manual resending of Gravity Forms entries to Momentum webhook
- * Version: 1.2.7
+ * Version: 1.2.8
  * Author: Momentum Integration
  *
  * @package MomentumWebhookManager
@@ -18,7 +18,12 @@
  *
  * Release Notes:
  *
- * Version 1.2.1 (Current)
+ * Version 1.2.8 (Current)
+ * - Added Form Debug page for analyzing actual form field structures (DFA-11/DFA-12)
+ * - New debug tool to generate accurate field mappings for Private Investigator forms
+ * - Enhanced development workflow for field mapping validation
+ *
+ * Version 1.2.1
  * - Prevent fatal errors when Gravity Forms is inactive by guarding GFAPI calls
  * - Admin Bar, Dashboard Widget, and Entries screen now check for GF availability
  *
@@ -48,7 +53,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define constants.
-define( 'MWM_VERSION', '1.2.1' );
+define( 'MWM_VERSION', '1.2.8' );
 define( 'MWM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'MWM_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 
@@ -186,6 +191,16 @@ function mwm_add_admin_menu() {
 		'manage_options',
 		'mwm-settings',
 		'mwm_settings_page'
+	);
+	
+	// Add debug page for form structure analysis
+	add_submenu_page(
+		'mwm-webhook-manager',
+		'Form Field Debug',
+		'Form Debug',
+		'manage_options',
+		'mwm-form-debug',
+		'mwm_form_debug_page'
 	);
 }
 
@@ -1600,5 +1615,175 @@ function mwm_dashboard_widget_control() {
 		</label>
 	</p>
 	<input type="hidden" name="mwm_widget_submit" value="1" />
+	<?php
+}
+
+/**
+ * Form Debug Page - Display actual form field structure
+ */
+function mwm_form_debug_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( 'You do not have sufficient permissions to access this page.' );
+	}
+	
+	// Check if Gravity Forms is available
+	if ( ! class_exists( 'GFAPI' ) ) {
+		?>
+		<div class="wrap">
+			<h1>Form Field Debug</h1>
+			<div class="notice notice-error">
+				<p>Gravity Forms is not active. Please activate Gravity Forms to use this feature.</p>
+			</div>
+		</div>
+		<?php
+		return;
+	}
+	
+	?>
+	<div class="wrap">
+		<h1>Form Field Debug - Actual Form Structure</h1>
+		<p>This page shows the actual field structure from your Gravity Forms to help create accurate field mappings.</p>
+		
+		<?php
+		// Forms to analyze
+		$forms_to_check = array(
+			2 => 'Old Private Investigator',
+			12 => 'Private Investigator',
+			10 => 'Security Guard (Reference)',
+		);
+		
+		foreach ( $forms_to_check as $form_id => $form_name ) {
+			$form = GFAPI::get_form( $form_id );
+			
+			if ( ! $form ) {
+				?>
+				<div class="notice notice-warning">
+					<p>Form ID <?php echo $form_id; ?> (<?php echo $form_name; ?>) not found.</p>
+				</div>
+				<?php
+				continue;
+			}
+			
+			?>
+			<h2>Form <?php echo $form_id; ?>: <?php echo esc_html( $form['title'] ); ?></h2>
+			<p><strong>Description:</strong> <?php echo esc_html( $form['description'] ); ?></p>
+			
+			<table class="wp-list-table widefat fixed striped">
+				<thead>
+					<tr>
+						<th>Field ID</th>
+						<th>Label</th>
+						<th>Type</th>
+						<th>Admin Label</th>
+						<th>Additional Info</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php
+					foreach ( $form['fields'] as $field ) {
+						?>
+						<tr>
+							<td><strong><?php echo $field->id; ?></strong></td>
+							<td><?php echo esc_html( $field->label ); ?></td>
+							<td><?php echo $field->type; ?></td>
+							<td><?php echo esc_html( $field->adminLabel ); ?></td>
+							<td>
+								<?php
+								// Show sub-fields for complex fields
+								if ( ! empty( $field->inputs ) ) {
+									echo '<strong>Sub-fields:</strong><br>';
+									foreach ( $field->inputs as $input ) {
+										if ( ! empty( $input['label'] ) ) {
+											echo '&nbsp;&nbsp;' . $input['id'] . ': ' . esc_html( $input['label'] ) . '<br>';
+										}
+									}
+								}
+								
+								// Show choices for select/radio/checkbox fields
+								if ( ! empty( $field->choices ) ) {
+									echo '<strong>Choices:</strong> ' . count( $field->choices ) . ' options<br>';
+								}
+								
+								// Show conditional logic
+								if ( ! empty( $field->conditionalLogic ) ) {
+									echo '<strong>Has conditional logic</strong><br>';
+								}
+								?>
+							</td>
+						</tr>
+						<?php
+					}
+					?>
+				</tbody>
+			</table>
+			
+			<h3>Field Mapping Array for Form <?php echo $form_id; ?>:</h3>
+			<pre style="background: #f0f0f0; padding: 10px; overflow: auto;">
+<?php
+			echo "return array(\n";
+			foreach ( $form['fields'] as $field ) {
+				$label = str_replace( ' ', '_', strtolower( preg_replace( '/[^a-zA-Z0-9 ]/', '', $field->label ) ) );
+				echo "\t'" . $field->id . "' => '" . $label . "',\n";
+				
+				// Include sub-fields
+				if ( ! empty( $field->inputs ) ) {
+					foreach ( $field->inputs as $input ) {
+						if ( ! empty( $input['label'] ) ) {
+							$sub_label = str_replace( ' ', '_', strtolower( preg_replace( '/[^a-zA-Z0-9 ]/', '', $input['label'] ) ) );
+							echo "\t'" . $input['id'] . "' => '" . $sub_label . "',\n";
+						}
+					}
+				}
+			}
+			echo ");\n";
+?>
+			</pre>
+			<?php
+		}
+		?>
+		
+		<h2>Recent Entry Data Sample</h2>
+		<p>Here's a sample of recent entry data to see actual field values:</p>
+		
+		<?php
+		// Get recent entries for PI forms
+		$search_criteria = array(
+			'status' => 'active',
+		);
+		
+		foreach ( array( 2, 12 ) as $form_id ) {
+			$form = GFAPI::get_form( $form_id );
+			if ( ! $form ) {
+				continue;
+			}
+			
+			$entries = GFAPI::get_entries( $form_id, $search_criteria, array(), array( 'offset' => 0, 'page_size' => 1 ) );
+			
+			if ( ! empty( $entries ) ) {
+				?>
+				<h3>Sample Entry from Form <?php echo $form_id; ?>:</h3>
+				<pre style="background: #f0f0f0; padding: 10px; overflow: auto; max-height: 400px;">
+<?php
+				$entry = $entries[0];
+				// Remove sensitive data
+				unset( $entry['ip'], $entry['user_agent'] );
+				
+				// Show field IDs with their values
+				foreach ( $entry as $field_id => $value ) {
+					if ( ! empty( $value ) && strpos( $field_id, '.' ) === false ) {
+						echo "Field " . $field_id . ": " . substr( $value, 0, 100 ) . ( strlen( $value ) > 100 ? '...' : '' ) . "\n";
+					}
+				}
+?>
+				</pre>
+				<?php
+			} else {
+				?>
+				<p>No entries found for Form <?php echo $form_id; ?>.</p>
+				<?php
+			}
+		}
+		?>
+	</div>
 	<?php
 }
