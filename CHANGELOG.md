@@ -49,3 +49,27 @@ The project contains two primary components:
 [1.2.0]: https://example.com/releases/1.2.0
 [1.1.0]: https://example.com/releases/1.1.0
 [1.0.0]: https://example.com/releases/1.0.0
+## [1.3.2] - 2025-09-11
+
+### Added
+- Form Debug page: "Copy mapping array" button to easily copy generated mapping arrays per form.
+
+### Changed
+- Limit auto-send to Forms 10, 11, 12 (Forms 1, 2, 3 remain for viewing/resend).
+- Bump versions to 1.3.2 across plugin and mapper.
+
+### Fixed
+- Minor cleanup in entry update hook and test webhook function.
+
+## [1.3.1] - 2025-09-11
+
+### Changed
+- Bump plugin and mapper versions to 1.3.1; align header and constant.
+- Standardize logging via `mwm_log()` for consistency with settings.
+
+### Fixed
+- Admin Bar notice variables initialized when Gravity Forms is inactive to avoid notices.
+- Mapper: corrected duplicate mapping key (95/96) and normalized field labels (limit_of_liability, lawsuit_claims_details).
+
+### Removed
+- Unused dev utilities: `get-form-fields.php`, `field-mappings.json`.

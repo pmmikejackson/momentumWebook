@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Momentum Webhook Manager
  * Description: Manages automatic sending and manual resending of Gravity Forms entries to Momentum webhook
- * Version: 1.2.9
+ * Version: 1.3.2
  * Author: Momentum Integration
  *
  * @package MomentumWebhookManager
@@ -18,7 +18,19 @@
  *
  * Release Notes:
  *
- * Version 1.2.9 (Current)
+ * Version 1.3.2 (Current)
+ * - Added "Copy mapping array" button on Form Debug page
+ * - Limited auto-send to forms 10/11/12; 1/2/3 view/resend only
+ * - Minor cleanup in test and update hooks
+ *
+ * Version 1.3.1
+ * - Version alignment across plugin and mapper
+ * - Admin Bar notice bug fixed when GF is inactive
+ * - Logging standardized via mwm_log()
+ * - Mapper corrections: duplicate key and label typos fixed
+ * - Removed unused dev artifacts (field-mappings.json, get-form-fields.php)
+ *
+ * Version 1.2.9
  * - Completed Private Investigator webhook integration (DFA-11)
  * - All 200+ PI field mappings implemented for Forms 2 & 12
  * - Removed infeasible license validation requirement
@@ -59,7 +71,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define constants.
-define( 'MWM_VERSION', '1.2.8' );
+define( 'MWM_VERSION', '1.3.2' );
 define( 'MWM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'MWM_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 
@@ -68,11 +80,25 @@ define( 'MWM_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
  * Otherwise assume it's already loaded via functions.php
  */
 if ( file_exists( MWM_PLUGIN_PATH . 'gravity-forms-field-mapper.php' ) ) {
-	require_once MWM_PLUGIN_PATH . 'gravity-forms-field-mapper.php';
+    require_once MWM_PLUGIN_PATH . 'gravity-forms-field-mapper.php';
 }
 
 /**
- * Activation hook - create database table for webhook logs
+ * Supported Gravity Forms IDs for this plugin.
+ */
+function mwm_supported_forms() {
+    return array( 1, 2, 3, 10, 11, 12 );
+}
+
+/**
+ * Forms that should auto-send on submission/update.
+ */
+function mwm_auto_send_forms() {
+    return array( 10, 11, 12 );
+}
+
+/**
+ * Activation hook - initialize default plugin options
  */
 register_activation_hook( __FILE__, 'mwm_activate' );
 
@@ -94,21 +120,24 @@ function mwm_activate() {
  */
 add_action( 'admin_bar_menu', 'mwm_add_admin_bar_menu', 100 );
 function mwm_add_admin_bar_menu( $wp_admin_bar ) {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		return;
-	}
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
 
-	$notification_count = 0;
-	if ( class_exists( 'GFAPI' ) ) {
-		$stats         = mwm_get_webhook_statistics();
-		$total_pending = 0;
-		$total_failed  = 0;
-		foreach ( $stats as $stat ) {
-			$total_pending += $stat['not_sent'];
-			$total_failed  += $stat['failed'];
-		}
-		$notification_count = $total_pending + $total_failed;
-	}
+    $notification_count = 0;
+    // Initialize so we can safely reference later even if GF isn't available
+    $total_pending = 0;
+    $total_failed  = 0;
+    if ( class_exists( 'GFAPI' ) ) {
+        $stats         = mwm_get_webhook_statistics();
+        $total_pending = 0;
+        $total_failed  = 0;
+        foreach ( $stats as $stat ) {
+            $total_pending += $stat['not_sent'];
+            $total_failed  += $stat['failed'];
+        }
+        $notification_count = $total_pending + $total_failed;
+    }
 	$title = 'Webhook Manager';
 
 	if ( $notification_count > 0 ) {
@@ -416,7 +445,7 @@ function mwm_admin_page() {
 		// Collect entries from supported forms
 		$all_entries = array();
 		$total_count = 0;
-		$form_ids    = $selected_form > 0 ? array( $selected_form ) : array( 1, 2, 3, 10, 11, 12 );
+        $form_ids    = $selected_form > 0 ? array( $selected_form ) : mwm_supported_forms();
 
 		foreach ( $form_ids as $form_id ) {
 			if ( ! GFAPI::form_id_exists( $form_id ) ) {
@@ -1070,10 +1099,10 @@ function mwm_handle_form_submission( $entry, $form ) {
 		return;
 	}
 
-	// Only process supported forms
-	if ( ! in_array( $form['id'], array( 1, 2, 3, 10, 11, 12 ) ) ) {
-		return;
-	}
+	// Only auto-send for forms 10, 11, 12
+    if ( ! in_array( $form['id'], mwm_auto_send_forms(), true ) ) {
+        return;
+    }
 
 	// Send to webhook
 	mwm_send_entry_to_webhook( $entry['id'], $form['id'], false );
@@ -1091,12 +1120,13 @@ function mwm_retry_webhook_handler( $entry_id, $form_id ) {
 /**
  * Hook into entry updates to resend
  */
+
 add_action( 'gform_after_update_entry', 'mwm_handle_entry_update', 10, 2 );
 function mwm_handle_entry_update( $form, $entry_id ) {
-	// Only process supported forms
-	if ( ! in_array( $form['id'], array( 1, 2, 3, 10, 11, 12 ) ) ) {
-		return;
-	}
+	// Only auto-send for forms 10, 11, 12
+    if ( ! in_array( $form['id'], mwm_auto_send_forms(), true ) ) {
+        return;
+    }
 
 	// Check if auto-send is enabled
 	if ( get_option( 'mwm_auto_send', 'yes' ) !== 'yes' ) {
@@ -1176,7 +1206,7 @@ function mwm_get_all_entries_for_bulk_action( $selected_form, $selected_status, 
 	);
 
 	$all_entries = array();
-	$form_ids    = $selected_form > 0 ? array( $selected_form ) : array( 1, 2, 3, 10, 11, 12 );
+    $form_ids    = $selected_form > 0 ? array( $selected_form ) : mwm_supported_forms();
 
 	foreach ( $form_ids as $form_id ) {
 		if ( ! GFAPI::form_id_exists( $form_id ) ) {
@@ -1190,8 +1220,8 @@ function mwm_get_all_entries_for_bulk_action( $selected_form, $selected_status, 
 		);
 		$entries          = GFAPI::get_entries( $form_id, $search_criteria, $sorting, $unlimited_paging );
 
-		// Debug: Log entry counts per form
-		error_log( 'MWM Debug: Form ' . $form_id . ' returned ' . count( $entries ) . ' entries' );
+        // Debug: Log entry counts per form (respects plugin logging option)
+        mwm_log( 'Form ' . $form_id . ' returned ' . count( $entries ) . ' entries for bulk action: ' . $bulk_action );
 
 		// Filter entries based on bulk action type
 		$filtered_entries = array();
@@ -1255,7 +1285,7 @@ function mwm_get_webhook_statistics( $use_cache = true ) {
 	}
 
 	$stats      = array();
-	$form_ids   = array( 1, 2, 3, 10, 11, 12 );
+    $form_ids   = mwm_supported_forms();
 	$form_names = array(
 		1  => 'Old Alarm Monitoring',
 		2  => 'Old Private Investigator',
@@ -1349,9 +1379,9 @@ function mwm_log( $message ) {
  */
 add_filter( 'gform_entry_list_columns', 'mwm_add_status_column', 10, 2 );
 function mwm_add_status_column( $columns, $form_id ) {
-	if ( in_array( $form_id, array( 1, 2, 3, 10, 11, 12 ) ) ) {
-		$columns['webhook_status'] = 'Webhook';
-	}
+    if ( in_array( $form_id, mwm_supported_forms(), true ) ) {
+        $columns['webhook_status'] = 'Webhook';
+    }
 	return $columns;
 }
 
@@ -1360,9 +1390,9 @@ function mwm_add_status_column( $columns, $form_id ) {
  */
 add_filter( 'gform_entries_column_filter', 'mwm_status_column_content', 10, 5 );
 function mwm_status_column_content( $value, $form_id, $field_id, $entry, $query_string ) {
-	if ( $field_id === 'webhook_status' && in_array( $form_id, array( 1, 2, 3, 10, 11, 12 ) ) ) {
-		$status    = gform_get_meta( $entry['id'], 'mwm_webhook_status' );
-		$last_sent = gform_get_meta( $entry['id'], 'mwm_webhook_sent' );
+    if ( $field_id === 'webhook_status' && in_array( $form_id, mwm_supported_forms(), true ) ) {
+        $status    = gform_get_meta( $entry['id'], 'mwm_webhook_status' );
+        $last_sent = gform_get_meta( $entry['id'], 'mwm_webhook_sent' );
 
 		if ( $status === 'sent' ) {
 			$value = '<span style="color: green;">✓</span>';
@@ -1386,11 +1416,11 @@ function mwm_status_column_content( $value, $form_id, $field_id, $entry, $query_
  */
 add_filter( 'gform_entries_first_column_actions', 'mwm_add_resend_action', 10, 4 );
 function mwm_add_resend_action( $actions, $form_id, $field_id, $entry ) {
-	if ( in_array( $form_id, array( 1, 2, 3, 10, 11, 12 ) ) ) {
-		$resend_url                = wp_nonce_url(
-			admin_url( 'admin.php?page=mwm-webhook-manager&action=quick_resend&entry=' . $entry['id'] . '&form=' . $form_id ),
-			'mwm_quick_resend'
-		);
+    if ( in_array( $form_id, mwm_supported_forms(), true ) ) {
+        $resend_url                = wp_nonce_url(
+            admin_url( 'admin.php?page=mwm-webhook-manager&action=quick_resend&entry=' . $entry['id'] . '&form=' . $form_id ),
+            'mwm_quick_resend'
+        );
 		$actions['resend_webhook'] = '<a href="' . $resend_url . '">Resend Webhook</a>';
 	}
 	return $actions;
@@ -1652,11 +1682,13 @@ function mwm_form_debug_page() {
 		
 		<?php
 		// Forms to analyze
-		$forms_to_check = array(
-			2 => 'Old Private Investigator',
-			12 => 'Private Investigator',
-			10 => 'Security Guard (Reference)',
-		);
+    $forms_to_check = array(
+        2  => 'Old Private Investigator',
+        12 => 'Private Investigator',
+        1  => 'Old Alarm Monitoring',
+        11 => 'Alarm Monitoring',
+        10 => 'Security Guard (Reference)',
+    );
 		
 		foreach ( $forms_to_check as $form_id => $form_name ) {
 			$form = GFAPI::get_form( $form_id );
@@ -1723,8 +1755,10 @@ function mwm_form_debug_page() {
 				</tbody>
 			</table>
 			
-			<h3>Field Mapping Array for Form <?php echo $form_id; ?>:</h3>
-			<pre style="background: #f0f0f0; padding: 10px; overflow: auto;">
+			<h3 style="display:flex; align-items:center; gap:10px;">Field Mapping Array for Form <?php echo $form_id; ?>:
+				<button type="button" class="button mwm-copy-btn" data-copy-target="mwm-mapping-<?php echo $form_id; ?>">Copy mapping array</button>
+			</h3>
+			<pre id="mwm-mapping-<?php echo $form_id; ?>" style="background: #f0f0f0; padding: 10px; overflow: auto;">
 <?php
 			echo "return array(\n";
 			foreach ( $form['fields'] as $field ) {
@@ -1744,6 +1778,41 @@ function mwm_form_debug_page() {
 			echo ");\n";
 ?>
 			</pre>
+			<script>
+			(function(){
+				if (window.mwmCopyInit) return; // init once
+				window.mwmCopyInit = true;
+				document.addEventListener('click', function(ev){
+					var btn = ev.target.closest('.mwm-copy-btn');
+					if (!btn) return;
+					var targetId = btn.getAttribute('data-copy-target');
+					var pre = document.getElementById(targetId);
+					if (!pre) return;
+					var text = pre.innerText;
+					var setDone = function(){
+						var old = btn.innerText;
+						btn.innerText = 'Copied!';
+						setTimeout(function(){ btn.innerText = old; }, 1200);
+					};
+					if (navigator.clipboard && navigator.clipboard.writeText) {
+						navigator.clipboard.writeText(text).then(setDone).catch(function(){
+							// fallback
+							var ta = document.createElement('textarea');
+							ta.value = text; document.body.appendChild(ta); ta.select();
+							try { document.execCommand('copy'); } catch(e) {}
+							document.body.removeChild(ta);
+							setDone();
+						});
+					} else {
+						var ta = document.createElement('textarea');
+						ta.value = text; document.body.appendChild(ta); ta.select();
+						try { document.execCommand('copy'); } catch(e) {}
+						document.body.removeChild(ta);
+						setDone();
+					}
+				});
+			})();
+			</script>
 			<?php
 		}
 		?>
