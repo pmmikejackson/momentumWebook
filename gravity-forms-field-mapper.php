@@ -1,7 +1,7 @@
 <?php
 /**
  * Gravity Forms Field Mapper for Momentum Webhook
- * Version: 1.2.1
+ * Version: 1.2.2
  *
  * @package MomentumWebhookManager
  * 
@@ -11,7 +11,12 @@
  * 
  * Release Notes:
  * 
- * Version 1.2.1 (Current)
+ * Version 1.2.2 (Current)
+ * - Updated Private Investigator form (ID 12) with comprehensive field mappings
+ * - Added 120+ specific field mappings for all PI form sections
+ * - Improved field names for better data identification in webhooks
+ * 
+ * Version 1.2.1
  * - Enhanced field mappings with comprehensive coverage (200+ fields)
  * - Fixed duplicate field ID mappings (fields 65, 66, 95, 96)
  * - Updated field names for consistency (alternate_name, limit_of_liability)
@@ -345,9 +350,184 @@ function get_alarm_monitoring_form_field_mappings() {
  * Get field mappings for Private Investigator form (Form ID 12)
  */
 function get_private_investigator_form_field_mappings() {
-	// Using same field structure as Security Guard form
-	// These mappings can be customized for Private Investigator specific fields
-	return get_security_guard_form_field_mappings();
+	return array(
+		// Section I - General Information
+		'106' => 'section_i__general_information',
+		'1' => 'insureds__name_including_dbas',
+		'2' => 'mailing_address',
+		'2.1' => 'street_address',
+		'2.2' => 'address_line_2',
+		'2.3' => 'city',
+		'2.4' => 'state__province__region',
+		'2.5' => 'zip__postal_code',
+		'2.6' => 'country',
+		'3' => 'physical_address',
+		'3.1' => 'street_address',
+		'3.2' => 'address_line_2',
+		'3.3' => 'city',
+		'3.4' => 'state__province__region',
+		'3.5' => 'zip__postal_code',
+		'3.6' => 'country',
+		'4' => 'contact_name',
+		'5' => 'title',
+		'6' => 'phone',
+		'7' => 'cell',
+		'8' => 'effective_date_desired',
+		'9' => 'check_one',
+		'107' => 'html_block',
+		'10' => 'occurence',
+		'11' => 'aggregate',
+		'12' => 'email_address',
+		'13' => 'date_company_established',
+		'14' => 'what_background_do_the_principals_of_this_organization_have_in_the_investigative_industry',
+		'15' => 'federal_id_number_fein',
+		'16' => 'license_number',
+		'112' => 'html_block',
+		'17' => 'does_applicant_subcontract_work_to_others',
+		'18' => 'do_subcontractors_maintain_their_own_insurance',
+		'19' => 'are_certificates_of_insurance_required_from_subcontractors',
+		'20' => 'do_you_require_subcontractors_to_name_you_as_an_additional_insured_on_their_policies',
+		'21' => 'annual_subcontractor_cost',
+		'22' => 'does_your_firm_provide_any_type_of_security_guard_or_alarm_operations',
+		'23' => 'if_yes_please_explain',
+		'24' => 'please_provide_a_list_of_your_types_of_clients_along_with_a_description_of_services',
+		
+		// Section II - Operations
+		'108' => 'section_ii__operations',
+		'25' => 'total_number_of_owners',
+		'26' => 'number_of_owners_performing_investigations',
+		'28' => 'number_of_owners_that_work_250_hours_or_less_per_year',
+		'29' => 'number_of_owners_that_work_251_to_450_hours_per_year',
+		'30' => 'number_of_owners_that_work_451_hours_or_more_per_year',
+		'31' => 'number_of_employees_performing_or_involved_with_investigations',
+		'32' => 'number_of_investigation_employees_that_work_250_hours_or_less_per_year',
+		'33' => 'number_of_investigation_employees_that_work_251_hours_to_450_hours_per_year',
+		'123' => 'number_of_investigation_employees_that_work_451_hours_or_more_per_year',
+		'35' => 'annual_corporate_revenue',
+		'36' => 'total_employee_payroll',
+		'113' => 'employee_training_consists_of',
+		'113.1' => 'written_manual',
+		'113.2' => 'report_writing',
+		'113.3' => 'firearms',
+		'113.4' => 'cpr',
+		'113.5' => 'powers_of_arrest',
+		'113.6' => 'on_the_job',
+		'113.7' => 'other',
+		'114' => 'preemployment_screening_procedures_for_employees_check_all_that_apply',
+		'114.1' => 'driving_record_mvr',
+		'114.2' => 'background_check',
+		'114.3' => 'drug_screening',
+		'114.4' => 'fingerprint_check',
+		'114.5' => 'personal_references',
+		'114.6' => 'other',
+		
+		// Section II - Operations Continued
+		'109' => 'section_ii__operations_continued',
+		'115' => 'html_block',
+		'39' => 'accident_investigationsreconstruction',
+		'40' => 'asset_searches',
+		'41' => 'background_investigations',
+		'42' => 'bank__accounting_fraud',
+		'43' => 'child_recoverycustody',
+		'44' => 'computer_crime',
+		'45' => 'creditpreemployment',
+		'46' => 'domestic_matrimonialdivorce',
+		'47' => 'environmental',
+		'48' => 'executive_protection',
+		'49' => 'expert_witness',
+		'50' => 'fire__arson',
+		'51' => 'insurance_investigations',
+		'52' => 'legal_investigations',
+		'53' => 'missing_persons__heirs',
+		'54' => 'process_serving',
+		'55' => 'record_services',
+		'56' => 'repossessions',
+		'57' => 'shopping_services',
+		'58' => 'skip_tracing__collections',
+		'59' => 'surveillance__electronic',
+		'60' => 'wc__fraud_investigations',
+		'61' => 'white_collar_crimes',
+		'62' => 'other',
+		'116' => 'html_block',
+		'63' => 'construction_design',
+		'64' => 'criminal',
+		'65' => 'data__computer_security',
+		'66' => 'kidnap__terrorist',
+		'67' => 'seminars__lectures',
+		'68' => 'terrorism',
+		'69' => 'threat_assessments',
+		'70' => 'other',
+		'117' => 'html_block',
+		'71' => 'paper__pen__pencil',
+		'72' => 'polygraph',
+		'73' => 'psychological_stress_evaluator',
+		'74' => 'other',
+		'118' => 'html_block',
+		'75' => '_firearms_trainingclassroom_studentsyr',
+		'76' => '_securityclassroom_studentsyr',
+		'77' => '_firearms_trainingfiring_range_studentsyr',
+		'78' => '_other_studentsyr',
+		'119' => 'html_block',
+		
+		// Section III - Description of Operations
+		'110' => 'section_iii__description_of_operations_if_applicable',
+		'79' => 'accident_investigationsreconstruction__please_describe_all_operations_below',
+		'80' => 'any_fault_assessment',
+		'81' => 'executive_protection__please_describe_all_duties_performed_below',
+		'82' => 'any_athletes_celebrities_or_entertainers',
+		'83' => 'expert_witness__do_you_provide_court_testimony_as_an_expert_for_cases_that_you_are_not_investigating',
+		'84' => 'if_yes_please_describe_all_operationsduties_performed',
+		'85' => 'provide_resume',
+		'86' => 'firearson__please_describe_all_operationsduties_performed_below',
+		'87' => 'any_cause_of_origin',
+		'88' => 'shopping_services__please_describe_events_locations_and_duties',
+		'89' => 'security_consulting__please_describe_clients_scope_of_services_performed',
+		'90' => 'provide_a_sample_contract',
+		'91' => 'other__please_describe_all_operationsduties_performed',
+		
+		// Section IV - Current Insurance Information
+		'111' => 'section_iv__current_insurance_information',
+		'92' => 'current_carrier',
+		'93' => 'inception_date',
+		'94' => 'expiration_date',
+		'95' => 'premium',
+		'96' => 'deductible',
+		'97' => 'limit_of_liability',
+		'98' => 'occurrence_form',
+		'99' => 'have_there_been_any_claims_or_lawsuits_in_the_past_5_years',
+		'120' => 'if_yes_please_attach_statement_of_losses',
+		'101' => 'do_you_anticipate_any_future_claimslosses',
+		'121' => 'signage',
+		'102' => 'applicant_name',
+		'103' => 'applicant_title',
+		'104' => 'date',
+		'122' => 'signature',
+		
+		// System fields
+		'id' => 'entry_id',
+		'form_id' => 'form_id',
+		'post_id' => 'post_id',
+		'date_created' => 'date_created',
+		'date_updated' => 'date_updated',
+		'is_starred' => 'is_starred',
+		'is_read' => 'is_read',
+		'ip' => 'ip_address',
+		'source_url' => 'source_url',
+		'payment_status' => 'payment_status',
+		'payment_date' => 'payment_date',
+		'payment_amount' => 'payment_amount',
+		'payment_method' => 'payment_method',
+		'transaction_id' => 'transaction_id',
+		'is_fulfilled' => 'is_fulfilled',
+		'created_by' => 'created_by_user_id',
+		'transaction_type' => 'transaction_type',
+		'status' => 'entry_status',
+		'unique_id' => 'AgencyID',
+		'form_title' => 'form_name',
+		
+		// PDF field
+		'gpdf_65981c1a21d80' => 'generated_pdf_url'
+	);
 }
 
 /**
