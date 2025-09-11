@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Momentum Webhook Manager
  * Description: Manages automatic sending and manual resending of Gravity Forms entries to Momentum webhook
- * Version: 1.2.7
+ * Version: 1.2.9
  * Author: Momentum Integration
  *
  * @package MomentumWebhookManager
@@ -18,7 +18,12 @@
  *
  * Release Notes:
  *
- * Version 1.2.1 (Current)
+ * Version 1.2.9 (Current)
+ * - Updated webhook manager with latest improvements
+ * - Enhanced field mapping integration
+ * - Improved error handling and stability
+ *
+ * Version 1.2.1
  * - Prevent fatal errors when Gravity Forms is inactive by guarding GFAPI calls
  * - Admin Bar, Dashboard Widget, and Entries screen now check for GF availability
  *
@@ -48,7 +53,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define constants.
-define( 'MWM_VERSION', '1.2.1' );
+define( 'MWM_VERSION', '1.2.9' );
 define( 'MWM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'MWM_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 
