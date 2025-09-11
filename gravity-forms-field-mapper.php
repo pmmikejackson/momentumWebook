@@ -681,32 +681,46 @@ function transform_gravity_forms_webhook($data, $form_id = null) {
 	$form_id = intval($data['form_id']);
 	}
 	
-	// Select appropriate mappings based on form ID
-	switch ($form_id) {
-	case 1:
-	    $field_mappings = get_form_1_field_mappings();
-	    break;
-	case 2:
-	    $field_mappings = get_form_2_field_mappings();
-	    break;
-	case 3:
-	    $field_mappings = get_form_3_field_mappings();
-	    break;
-	case 10:
-	    $field_mappings = get_security_guard_form_field_mappings();
-	    break;
-	case 11:
-	    $field_mappings = get_alarm_monitoring_form_field_mappings();
-	    break;
-	case 12:
-	    $field_mappings = get_private_investigator_form_field_mappings();
-	    break;
-	default:
-	    // For unknown form IDs, return empty array or log warning
-	    $field_mappings = array();
-	    error_log('MWM Warning: Unknown form ID ' . $form_id . ' - no field mappings available');
-	    break;
-	}
+    // Select appropriate mappings based on form ID
+    $mapping_name = 'unknown';
+    switch ($form_id) {
+    case 1:
+        $field_mappings = get_form_1_field_mappings();
+        $mapping_name = 'alarm_monitoring_legacy_1';
+        break;
+    case 2:
+        $field_mappings = get_form_2_field_mappings();
+        $mapping_name = 'private_investigator_legacy_2';
+        break;
+    case 3:
+        $field_mappings = get_form_3_field_mappings();
+        $mapping_name = 'security_guard_legacy_3';
+        break;
+    case 10:
+        $field_mappings = get_security_guard_form_field_mappings();
+        $mapping_name = 'security_guard_10';
+        break;
+    case 11:
+        $field_mappings = get_alarm_monitoring_form_field_mappings();
+        $mapping_name = 'alarm_monitoring_11';
+        break;
+    case 12:
+        $field_mappings = get_private_investigator_form_field_mappings();
+        $mapping_name = 'private_investigator_12';
+        break;
+    default:
+        // For unknown form IDs, return empty array or log warning
+        $field_mappings = array();
+        error_log('MWM Warning: Unknown form ID ' . $form_id . ' - no field mappings available');
+        break;
+    }
+
+    if (function_exists('mwm_log')) {
+        // Log selected mapping and a small sample of input keys
+        $keys = array_keys($data);
+        $sample = array_slice($keys, 0, 6);
+        mwm_log('Mapper: using ' . $mapping_name . ' for form_id=' . $form_id . ' | sample keys: ' . implode(',', $sample));
+    }
 	
 	// Fields to exclude from the webhook payload
 	$excluded_fields = array('id', 'form_id', 'is_starred', 'is_read', 'ip', 'user_agent', 'currency', 'source_id', '202');
