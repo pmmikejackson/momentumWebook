@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Momentum Webhook Manager
  * Description: Manages automatic sending and manual resending of Gravity Forms entries to Momentum webhook
- * Version: 1.2.8
+ * Version: 1.2.9
  * Author: Momentum Integration
  *
  * @package MomentumWebhookManager
@@ -18,7 +18,13 @@
  *
  * Release Notes:
  *
- * Version 1.2.8 (Current)
+ * Version 1.2.9 (Current)
+ * - Completed Private Investigator webhook integration (DFA-11)
+ * - All 200+ PI field mappings implemented for Forms 2 & 12
+ * - Removed infeasible license validation requirement
+ * - PI applications now fully supported in webhook system
+ *
+ * Version 1.2.8
  * - Added Form Debug page for analyzing actual form field structures (DFA-11/DFA-12)
  * - New debug tool to generate accurate field mappings for Private Investigator forms
  * - Enhanced development workflow for field mapping validation

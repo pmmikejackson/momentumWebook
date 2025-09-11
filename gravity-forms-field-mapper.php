@@ -1,7 +1,7 @@
 <?php
 /**
  * Gravity Forms Field Mapper for Momentum Webhook
- * Version: 1.2.1
+ * Version: 1.2.2
  *
  * @package MomentumWebhookManager
  * 
