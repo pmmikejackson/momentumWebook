@@ -985,12 +985,12 @@ function mwm_send_entry_to_webhook( $entry_id, $form_id, $manual = false ) {
 		);
 	}
 
-	// Transform data using field mapper
-	if ( function_exists( 'transform_gravity_forms_webhook' ) ) {
-		$payload = transform_gravity_forms_webhook( $entry, $form_id );
-	} else {
-		$payload = $entry;
-	}
+    // Transform data using field mapper. Derive form_id from entry to avoid mismatch.
+    if ( function_exists( 'transform_gravity_forms_webhook' ) ) {
+        $payload = transform_gravity_forms_webhook( $entry, null );
+    } else {
+        $payload = $entry;
+    }
 
 	// Add metadata
 	$payload['_webhook_sent_at'] = current_time( 'mysql' );
