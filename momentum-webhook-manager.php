@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Momentum Webhook Manager
  * Description: Manages automatic sending and manual resending of Gravity Forms entries to Momentum webhook
- * Version: 1.3.2
+ * Version: 1.4.0
  * Author: Momentum Integration
  *
  * @package MomentumWebhookManager
@@ -94,7 +94,10 @@ function mwm_supported_forms() {
  * Forms that should auto-send on submission/update.
  */
 function mwm_auto_send_forms() {
-    return array( 10, 11, 12 );
+    // Get selected forms from settings, default to 10, 11, 12 for backward compatibility
+    $selected_forms = get_option( 'mwm_selected_forms', array( 10, 11, 12 ) );
+    // Ensure we return an array even if option is empty
+    return is_array( $selected_forms ) ? $selected_forms : array( 10, 11, 12 );
 }
 
 /**
@@ -113,6 +116,7 @@ function mwm_activate() {
 	add_option( 'mwm_log_webhooks', 'yes' );
 	add_option( 'mwm_max_retries', 3 );
 	add_option( 'mwm_enable_mapper_direct_send', 'no' );
+	add_option( 'mwm_selected_forms', array( 10, 11, 12 ) ); // Default to forms 10, 11, 12
 }
 
 /**
@@ -228,14 +232,14 @@ function mwm_add_admin_menu() {
 		'mwm_settings_page'
 	);
 	
-	// Add debug page for form structure analysis
+	// Add form mapping page for field structure analysis
 	add_submenu_page(
 		'mwm-webhook-manager',
-		'Form Field Debug',
-		'Form Debug',
+		'Form Field Mapping',
+		'Form Mapping',
 		'manage_options',
-		'mwm-form-debug',
-		'mwm_form_debug_page'
+		'mwm-form-mapping',
+		'mwm_form_mapping_page'
 	);
 }
 
@@ -360,9 +364,38 @@ function mwm_admin_page() {
 		}
 		?>
 		
-		<div class="notice notice-info">
-			<p><strong>Supported Forms:</strong> Old Alarm Monitoring (ID: 1), Old Private Investigator (ID: 2), Old Security Guard (ID: 3), Security Guard (ID: 10), Alarm Monitoring (ID: 11), Private Investigator (ID: 12)</p>
-		</div>
+		<?php
+		// Get selected forms for display
+		$selected_forms = mwm_auto_send_forms();
+		$supported_forms = mwm_supported_forms();
+
+		if ( ! empty( $selected_forms ) ) {
+			echo '<div class="notice notice-info">';
+			echo '<p><strong>Auto-Send Forms:</strong> ';
+
+			if ( class_exists( 'GFAPI' ) ) {
+				$form_names = array();
+				foreach ( $selected_forms as $form_id ) {
+					$form = GFAPI::get_form( $form_id );
+					if ( $form ) {
+						$form_names[] = $form['title'] . ' (ID: ' . $form_id . ')';
+					} else {
+						$form_names[] = 'Form ID: ' . $form_id . ' (not found)';
+					}
+				}
+				echo implode( ', ', $form_names );
+			} else {
+				echo 'Form IDs: ' . implode( ', ', $selected_forms );
+			}
+
+			echo '</p>';
+			echo '</div>';
+		} else {
+			echo '<div class="notice notice-warning">';
+			echo '<p><strong>No forms selected for auto-send.</strong> Please select forms in Settings to enable automatic webhook sending.</p>';
+			echo '</div>';
+		}
+		?>
 		
 		<?php
 		// Filters (already initialized above; keep in sync from GET for UI)
@@ -798,6 +831,15 @@ function mwm_settings_page() {
 		update_option( 'mwm_enable_mapper_direct_send', isset( $_POST['mapper_direct_send'] ) ? 'yes' : 'no' );
 		update_option( 'mwm_default_type', sanitize_text_field( $_POST['default_type'] ) );
 
+		// Save selected forms
+		$selected_forms = array();
+		if ( isset( $_POST['selected_forms'] ) && is_array( $_POST['selected_forms'] ) ) {
+			foreach ( $_POST['selected_forms'] as $form_id ) {
+				$selected_forms[] = intval( $form_id );
+			}
+		}
+		update_option( 'mwm_selected_forms', $selected_forms );
+
 		echo '<div class="notice notice-success"><p>Settings saved successfully!</p></div>';
 	}
 
@@ -844,11 +886,69 @@ function mwm_settings_page() {
 					<th scope="row">Automatic Sending</th>
 					<td>
 						<label>
-							<input type="checkbox" name="auto_send" value="yes" 
+							<input type="checkbox" name="auto_send" value="yes"
 									<?php checked( $auto_send, 'yes' ); ?> />
 							Automatically send form submissions to webhook
 						</label>
-						<p class="description">When enabled, forms 10, 11, and 12 will automatically send to the webhook upon submission.</p>
+						<p class="description">When enabled, selected forms will automatically send to the webhook upon submission.</p>
+					</td>
+				</tr>
+
+				<tr>
+					<th scope="row">Select Forms to Send</th>
+					<td>
+						<?php
+						// Get selected forms from options
+						$selected_forms = get_option( 'mwm_selected_forms', array( 10, 11, 12 ) );
+						if ( ! is_array( $selected_forms ) ) {
+							$selected_forms = array( 10, 11, 12 );
+						}
+
+						if ( class_exists( 'GFAPI' ) ) {
+							// Get all available forms
+							$forms = GFAPI::get_forms();
+
+							if ( ! empty( $forms ) ) {
+								echo '<fieldset style="border: 1px solid #ccc; padding: 10px; max-height: 200px; overflow-y: auto;">';
+								echo '<legend style="padding: 0 5px;">Available Forms</legend>';
+
+								foreach ( $forms as $form ) {
+									$is_checked = in_array( $form['id'], $selected_forms, true );
+									echo '<label style="display: block; margin: 5px 0;">';
+									echo '<input type="checkbox" name="selected_forms[]" value="' . esc_attr( $form['id'] ) . '" ';
+									if ( $is_checked ) {
+										echo 'checked="checked" ';
+									}
+									echo '/> ';
+									echo esc_html( $form['title'] ) . ' (ID: ' . $form['id'] . ')';
+
+									// Add indicator for legacy forms
+									if ( in_array( $form['id'], array( 1, 2, 3, 10, 11, 12 ), true ) ) {
+										$form_labels = array(
+											1 => ' - Old Alarm Monitoring',
+											2 => ' - Old Private Investigator',
+											3 => ' - Old Security Guard',
+											10 => ' - Security Guard',
+											11 => ' - Alarm Monitoring',
+											12 => ' - Private Investigator'
+										);
+										if ( isset( $form_labels[ $form['id'] ] ) ) {
+											echo '<em>' . $form_labels[ $form['id'] ] . '</em>';
+										}
+									}
+
+									echo '</label>';
+								}
+
+								echo '</fieldset>';
+							} else {
+								echo '<p>No forms found. Please create a form in Gravity Forms first.</p>';
+							}
+						} else {
+							echo '<p>Gravity Forms is not active. Please activate Gravity Forms to select forms.</p>';
+						}
+						?>
+						<p class="description">Select which forms should automatically send data to the webhook endpoint. Hold Ctrl/Cmd to select multiple forms.</p>
 					</td>
 				</tr>
 				
@@ -928,7 +1028,68 @@ function mwm_settings_page() {
 		</form>
 		
 		<hr />
-		
+
+		<h2>Form Field Mappings</h2>
+		<p>View the current field mappings for your selected forms. <a href="<?php echo admin_url( 'admin.php?page=mwm-form-mapping' ); ?>">View detailed mappings</a></p>
+
+		<?php
+		// Display field mapping summary for selected forms
+		$selected_forms = get_option( 'mwm_selected_forms', array( 10, 11, 12 ) );
+		if ( ! is_array( $selected_forms ) ) {
+			$selected_forms = array( 10, 11, 12 );
+		}
+
+		if ( ! empty( $selected_forms ) && class_exists( 'GFAPI' ) ) {
+			echo '<div style="max-width: 800px;">';
+			foreach ( $selected_forms as $form_id ) {
+				$form = GFAPI::get_form( $form_id );
+				if ( $form ) {
+					echo '<details style="margin: 10px 0; border: 1px solid #ccc; padding: 10px;">';
+					echo '<summary style="font-weight: bold; cursor: pointer;">Form ' . $form_id . ': ' . esc_html( $form['title'] ) . ' (' . count( $form['fields'] ) . ' fields)</summary>';
+					echo '<div style="margin-top: 10px;">';
+
+					// Show first few field mappings as preview
+					echo '<table class="widefat" style="margin-top: 10px;">';
+					echo '<thead><tr><th>Field ID</th><th>Field Label</th><th>Mapped Name</th><th>Type</th></tr></thead>';
+					echo '<tbody>';
+
+					$field_count = 0;
+					$max_preview = 10; // Show first 10 fields as preview
+
+					foreach ( $form['fields'] as $field ) {
+						if ( $field_count >= $max_preview ) {
+							$remaining = count( $form['fields'] ) - $max_preview;
+							echo '<tr><td colspan="4" style="text-align: center; font-style: italic;">... and ' . $remaining . ' more fields. <a href="' . admin_url( 'admin.php?page=mwm-form-mapping' ) . '">View all mappings</a></td></tr>';
+							break;
+						}
+
+						$mapped_name = str_replace( ' ', '_', strtolower( preg_replace( '/[^a-zA-Z0-9 ]/', '', $field->label ) ) );
+						echo '<tr>';
+						echo '<td>' . $field->id . '</td>';
+						echo '<td>' . esc_html( $field->label ) . '</td>';
+						echo '<td><code>' . $mapped_name . '</code></td>';
+						echo '<td>' . $field->type . '</td>';
+						echo '</tr>';
+
+						$field_count++;
+					}
+
+					echo '</tbody></table>';
+					echo '</div>';
+					echo '</details>';
+				}
+			}
+			echo '</div>';
+			echo '<p style="margin-top: 15px;"><a href="' . admin_url( 'admin.php?page=mwm-form-mapping' ) . '" class="button">View Full Field Mappings</a></p>';
+		} elseif ( empty( $selected_forms ) ) {
+			echo '<p>No forms selected. Please select forms above to see their field mappings.</p>';
+		} else {
+			echo '<p>Gravity Forms is not active. Field mappings cannot be displayed.</p>';
+		}
+		?>
+
+		<hr />
+
 		<h2>Webhook Statistics</h2>
 		<?php
 		// Get statistics
@@ -1099,7 +1260,7 @@ function mwm_handle_form_submission( $entry, $form ) {
 		return;
 	}
 
-	// Only auto-send for forms 10, 11, 12
+	// Only auto-send for selected forms
     if ( ! in_array( $form['id'], mwm_auto_send_forms(), true ) ) {
         return;
     }
@@ -1123,7 +1284,7 @@ function mwm_retry_webhook_handler( $entry_id, $form_id ) {
 
 add_action( 'gform_after_update_entry', 'mwm_handle_entry_update', 10, 2 );
 function mwm_handle_entry_update( $form, $entry_id ) {
-	// Only auto-send for forms 10, 11, 12
+	// Only auto-send for selected forms
     if ( ! in_array( $form['id'], mwm_auto_send_forms(), true ) ) {
         return;
     }
@@ -1655,9 +1816,9 @@ function mwm_dashboard_widget_control() {
 }
 
 /**
- * Form Debug Page - Display actual form field structure
+ * Form Mapping Page - Display actual form field structure and mappings
  */
-function mwm_form_debug_page() {
+function mwm_form_mapping_page() {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_die( 'You do not have sufficient permissions to access this page.' );
 	}
@@ -1677,18 +1838,31 @@ function mwm_form_debug_page() {
 	
 	?>
 	<div class="wrap">
-		<h1>Form Field Debug - Actual Form Structure</h1>
-		<p>This page shows the actual field structure from your Gravity Forms to help create accurate field mappings.</p>
+		<h1>Form Field Mapping - Field Structure &amp; Mappings</h1>
+		<p>This page shows the field structure and mappings for your selected forms. Use this to understand which fields are being sent to the webhook.</p>
 		
 		<?php
-		// Forms to analyze
-    $forms_to_check = array(
-        2  => 'Old Private Investigator',
-        12 => 'Private Investigator',
-        1  => 'Old Alarm Monitoring',
-        11 => 'Alarm Monitoring',
-        10 => 'Security Guard (Reference)',
-    );
+		// Get selected forms from settings
+		$selected_forms = get_option( 'mwm_selected_forms', array( 10, 11, 12 ) );
+		if ( ! is_array( $selected_forms ) ) {
+			$selected_forms = array( 10, 11, 12 );
+		}
+
+		// Build forms array to check
+		$forms_to_check = array();
+		if ( class_exists( 'GFAPI' ) ) {
+			foreach ( $selected_forms as $form_id ) {
+				$form = GFAPI::get_form( $form_id );
+				if ( $form ) {
+					$forms_to_check[ $form_id ] = $form['title'];
+				}
+			}
+		}
+
+		if ( empty( $forms_to_check ) ) {
+			echo '<div class="notice notice-warning"><p>No forms selected. Please select forms in the Settings page first.</p></div>';
+			return;
+		}
 		
 		foreach ( $forms_to_check as $form_id => $form_name ) {
 			$form = GFAPI::get_form( $form_id );
