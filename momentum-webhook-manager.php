@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name: Momentum Webhook Manager
+ * Plugin Name: Gravity Forms to Momentum Webhook Manager
  * Description: Manages automatic sending and manual resending of Gravity Forms entries to Momentum webhook
- * Version: 1.4.0
- * Author: Momentum Integration
+ * Version: 1.4.2
+ * Author: Mike Jackson with Claude
  *
  * @package MomentumWebhookManager
  *
@@ -280,6 +280,23 @@ function mwm_admin_page() {
 		} else {
 			echo '<div class="notice notice-error"><p>' . esc_html( $result['message'] ) . '</p></div>';
 		}
+
+		// Restore filter state from posted values
+		if ( isset( $_POST['current_form_filter'] ) ) {
+			$selected_form = intval( $_POST['current_form_filter'] );
+		}
+		if ( isset( $_POST['current_status_filter'] ) ) {
+			$selected_status = sanitize_text_field( $_POST['current_status_filter'] );
+		}
+		if ( isset( $_POST['current_read_filter'] ) ) {
+			$selected_read = sanitize_text_field( $_POST['current_read_filter'] );
+		}
+		if ( isset( $_POST['current_per_page'] ) ) {
+			$per_page = intval( $_POST['current_per_page'] );
+		}
+		if ( isset( $_POST['current_pagenum'] ) ) {
+			$page_num = intval( $_POST['current_pagenum'] );
+		}
 	}
 
 	// Handle bulk resend
@@ -419,12 +436,20 @@ function mwm_admin_page() {
 					<label for="form_id" style="font-weight: bold;">Form:</label>
 					<select name="form_id" id="form_id" onchange="this.form.submit()">
 						<option value="0">All Forms</option>
-						<option value="1" <?php selected( $selected_form, 1 ); ?>>Old Alarm Monitoring (1)</option>
-						<option value="2" <?php selected( $selected_form, 2 ); ?>>Old Private Investigator (2)</option>
-						<option value="3" <?php selected( $selected_form, 3 ); ?>>Old Security Guard (3)</option>
-						<option value="10" <?php selected( $selected_form, 10 ); ?>>Security Guard (10)</option>
-						<option value="11" <?php selected( $selected_form, 11 ); ?>>Alarm Monitoring (11)</option>
-						<option value="12" <?php selected( $selected_form, 12 ); ?>>Private Investigator (12)</option>
+						<?php
+						// Get all available forms and display them dynamically
+						if ( class_exists( 'GFAPI' ) ) {
+							$all_forms = GFAPI::get_forms();
+							if ( ! empty( $all_forms ) ) {
+								foreach ( $all_forms as $form ) {
+									$form_id = $form['id'];
+									$form_title = $form['title'];
+									$is_selected = selected( $selected_form, $form_id, false );
+									echo '<option value="' . esc_attr( $form_id ) . '" ' . $is_selected . '>' . esc_html( $form_title ) . ' (' . $form_id . ')</option>';
+								}
+							}
+						}
+						?>
 					</select>
 				</div>
 				
@@ -703,12 +728,24 @@ function mwm_admin_page() {
 										<?php wp_nonce_field( 'mwm_resend', 'mwm_nonce' ); ?>
 										<input type="hidden" name="entry_id" value="<?php echo esc_attr( $entry['id'] ); ?>" />
 										<input type="hidden" name="form_id" value="<?php echo esc_attr( $entry['form_id'] ); ?>" />
+										<!-- Preserve current filter state -->
+										<input type="hidden" name="current_form_filter" value="<?php echo esc_attr( $selected_form ); ?>" />
+										<input type="hidden" name="current_status_filter" value="<?php echo esc_attr( $selected_status ); ?>" />
+										<input type="hidden" name="current_read_filter" value="<?php echo esc_attr( $selected_read ); ?>" />
+										<input type="hidden" name="current_per_page" value="<?php echo esc_attr( $per_page ); ?>" />
+										<input type="hidden" name="current_pagenum" value="<?php echo esc_attr( $page_num ); ?>" />
 										<button type="submit" name="resend_entry" class="button button-small"><?php echo ( $webhook_status === 'sent' || $webhook_status === 'failed' ) ? 'Resend' : 'Send'; ?></button>
 									</form>
 									<form method="post" style="display: inline; margin-left: 4px;">
 										<?php wp_nonce_field( 'mwm_toggle_read', 'mwm_nonce' ); ?>
 										<input type="hidden" name="entry_id" value="<?php echo esc_attr( $entry['id'] ); ?>" />
 										<input type="hidden" name="new_read" value="<?php echo $is_read ? '0' : '1'; ?>" />
+										<!-- Preserve current filter state -->
+										<input type="hidden" name="form_id" value="<?php echo esc_attr( $selected_form ); ?>" />
+										<input type="hidden" name="status" value="<?php echo esc_attr( $selected_status ); ?>" />
+										<input type="hidden" name="read_state" value="<?php echo esc_attr( $selected_read ); ?>" />
+										<input type="hidden" name="per_page" value="<?php echo esc_attr( $per_page ); ?>" />
+										<input type="hidden" name="pagenum" value="<?php echo esc_attr( $page_num ); ?>" />
 										<button type="submit" name="toggle_read" class="button button-small">
 											<?php echo $is_read ? 'Mark Unread' : 'Mark Read'; ?>
 										</button>
@@ -1447,19 +1484,15 @@ function mwm_get_webhook_statistics( $use_cache = true ) {
 
 	$stats      = array();
     $form_ids   = mwm_supported_forms();
-	$form_names = array(
-		1  => 'Old Alarm Monitoring',
-		2  => 'Old Private Investigator',
-		3  => 'Old Security Guard',
-		10 => 'Security Guard',
-		11 => 'Alarm Monitoring',
-		12 => 'Private Investigator',
-	);
 
 	foreach ( $form_ids as $form_id ) {
 		if ( ! GFAPI::form_id_exists( $form_id ) ) {
 			continue;
 		}
+
+		// Get the actual form title from Gravity Forms
+		$form = GFAPI::get_form( $form_id );
+		$form_title = $form ? $form['title'] : 'Form ' . $form_id;
 
 		// Use more efficient counting query instead of fetching all entries
 		global $wpdb;
@@ -1508,7 +1541,7 @@ function mwm_get_webhook_statistics( $use_cache = true ) {
 		$not_sent = $total - $sent - $failed;
 
 		$stats[ $form_id ] = array(
-			'form_name' => $form_names[ $form_id ] . ' (ID: ' . $form_id . ')',
+			'form_name' => $form_title . ' (ID: ' . $form_id . ')',
 			'total'     => $total,
 			'sent'      => $sent,
 			'not_sent'  => $not_sent,
@@ -1602,7 +1635,8 @@ function mwm_handle_quick_resend() {
 
 		$result = mwm_send_entry_to_webhook( $entry_id, $form_id, true );
 
-		$redirect_url = admin_url( 'admin.php?page=gf_entries&id=' . $form_id );
+		// Redirect back to webhook manager page instead of Gravity Forms entries page
+		$redirect_url = admin_url( 'admin.php?page=mwm-webhook-manager' );
 
 		if ( $result['success'] ) {
 			$redirect_url = add_query_arg( 'webhook_sent', '1', $redirect_url );
